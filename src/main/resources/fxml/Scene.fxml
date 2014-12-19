@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import org.mskcc.shenkers.controller.*?>
+
+<AnchorPane xmlns:fx="http://javafx.com/fxml/1" id="AnchorPane" prefHeight="200" prefWidth="320" fx:controller="org.mskcc.shenkers.controller.FXMLController">
+    <children>
+        
+        <!--<fx:include fx:id="ci1" source="CoordinateInput.fxml"/>-->
+        <BorderPane prefHeight="400.0" prefWidth="600.0">
+            <top>
+                <MenuBar>
+                    <Menu text="File">
+                        <MenuItem onAction="#loadGenome"  text="Load genome"/>
+                        <MenuItem onAction="#loadTrack"  text="Load track"/>
+                    </Menu>
+                </MenuBar>
+            </top>
+            <right>
+                <CustomContainerController text="custom_right" />
+            </right>
+            <left>
+                <Button fx:id="button2" layoutX="146" layoutY="90" onAction="#handleButtonAction2" text="Add!" />
+            </left>
+            <bottom>
+                <fx:include fx:id="child" source="CoordinateInput.fxml"/>
+            </bottom>
+            <center>
+                <GridPane BorderPane.alignment="CENTER" alignment="CENTER" GridPane.valignment="CENTER" fx:id="gridpane">
+                    <columnConstraints>
+                        <!--                   <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />-->
+                    </columnConstraints>
+                    <rowConstraints>
+                        <!--<RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="true" fillHeight="true" />-->
+                    </rowConstraints>
+                </GridPane>
+            </center>
+        </BorderPane>
+        <ListView AnchorPane.topAnchor="400" prefHeight="200"  fx:id="lv">
+            
+        </ListView>
+        <SplitPane layoutY="600"  fx:id="sp" orientation="HORIZONTAL" >
+            <ListView fx:id="lv1" />
+            <ListView fx:id="lv2" />
+            <ListView fx:id="lv3" />
+        </SplitPane>
+    </children>
+</AnchorPane>

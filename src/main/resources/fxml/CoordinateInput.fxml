@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.*?>
+<?import java.lang.*?>
+<?import java.util.*?>
+<?import javafx.scene.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<FlowPane fx:id="child" hgap="10.0" maxHeight="17.0" prefHeight="17.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.mskcc.shenkers.controller.CoordinateInputController">
+   <children>
+      <Label text="Coordinate" />
+      <TextField fx:id="coordinateField" />
+      <Button fx:id="goButton" onAction="#parseAndUpdateCoordinates" text="Go" />
+      <Button mnemonicParsing="false" onAction="#zoomIn" text="+" />
+      <Slider />
+      <Button mnemonicParsing="false" text="-" />
+      <Button mnemonicParsing="false" text="Flip" />
+   </children>
+</FlowPane>
