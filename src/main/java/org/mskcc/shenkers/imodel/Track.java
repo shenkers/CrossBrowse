@@ -9,6 +9,6 @@ package org.mskcc.shenkers.imodel;
  *
  * @author sol
  */
-public interface TrackListListener {
+public abstract class Track implements GenomeSpanListener{
     
 }
