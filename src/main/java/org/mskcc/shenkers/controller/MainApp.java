@@ -35,32 +35,32 @@ public class MainApp extends Application {
 //        } catch (IOException e) {
 //            throw new RuntimeException(e);
 //        }
-        Injector inj = Guice.createInjector(new AbstractModule() {
-            
-            class ABC implements Serializable{
-                
-            }
-            
-            @Override
-            protected void configure() {
-                bind(Serializable.class).to(ABC.class);
-            }
-        },
-                new AbstractModule() {
-                    
-                    @Override
-                    protected void configure() {
-                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-                    }
-                }
-                
-                
-        );
-        Serializable instance = inj.getInstance(Serializable.class);
+//        Injector inj = Guice.createInjector(new AbstractModule() {
+//            
+//            class ABC implements Serializable{
+//                
+//            }
+//            
+//            @Override
+//            protected void configure() {
+//                bind(Serializable.class).to(ABC.class);
+//            }
+//        },
+//                new AbstractModule() {
+//                    
+//                    @Override
+//                    protected void configure() {
+//                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+//                    }
+//                }
+//                
+//                
+//        );
+//        Serializable instance = inj.getInstance(Serializable.class);
         Parent root = FXMLLoader.load(getClass().getResource("/fxml/Scene.fxml"));
         Scene scene = new Scene(root);
         scene.getStylesheets().add("/styles/Styles.css");
-
+        
         stage.setTitle("JavaFX and Maven");
         stage.setScene(scene);
         stage.show();

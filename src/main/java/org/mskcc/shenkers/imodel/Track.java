@@ -11,4 +11,5 @@ package org.mskcc.shenkers.imodel;
  */
 public abstract class Track implements GenomeSpanListener{
     
+    public abstract String getName();
 }

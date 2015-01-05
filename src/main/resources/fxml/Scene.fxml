@@ -3,6 +3,7 @@
 <?import java.lang.*?>
 <?import java.util.*?>
 <?import javafx.scene.*?>
+<?import javafx.scene.canvas.*?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import org.mskcc.shenkers.controller.*?>
@@ -30,24 +31,25 @@
                 <fx:include fx:id="child" source="CoordinateInput.fxml"/>
             </bottom>
             <center>
-                <GridPane BorderPane.alignment="CENTER" alignment="CENTER" GridPane.valignment="CENTER" fx:id="gridpane">
-                    <columnConstraints>
-                        <!--                   <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                        <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />-->
-                    </columnConstraints>
-                    <rowConstraints>
-                        <!--<RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="true" fillHeight="true" />-->
-                    </rowConstraints>
-                </GridPane>
+                <SplitPane fx:id="sp" orientation="VERTICAL" >
+                    <!--            <ListView fx:id="lv1" />
+                    <ListView fx:id="lv2" />
+                    <ListView fx:id="lv3" />-->
+                </SplitPane>
+                
             </center>
         </BorderPane>
-        <ListView AnchorPane.topAnchor="400" prefHeight="200"  fx:id="lv">
-            
-        </ListView>
-        <SplitPane layoutY="600"  fx:id="sp" orientation="HORIZONTAL" >
-            <ListView fx:id="lv1" />
-            <ListView fx:id="lv2" />
-            <ListView fx:id="lv3" />
-        </SplitPane>
+        <Pane AnchorPane.topAnchor="400" prefHeight="100" prefWidth="100"  fx:id="canvas" />
+        <BorderPane AnchorPane.topAnchor="400" AnchorPane.leftAnchor="200" prefHeight="100" prefWidth="100"  fx:id="stp" />
+        <ListView AnchorPane.topAnchor="500" prefHeight="200"  fx:id="lv" />
+        <GridPane AnchorPane.topAnchor="700" BorderPane.alignment="CENTER" alignment="CENTER" GridPane.valignment="CENTER" fx:id="gridpane">
+            <columnConstraints>
+                <!--                   <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />-->
+            </columnConstraints>
+            <rowConstraints>
+                <!--<RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="true" fillHeight="true" />-->
+            </rowConstraints>
+        </GridPane>
     </children>
 </AnchorPane>
