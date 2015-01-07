@@ -5,9 +5,10 @@
  */
 package org.mskcc.shenkers.control.track;
 
+import org.mskcc.shenkers.control.track.bam.BamContext;
 import com.google.inject.Inject;
 import java.io.File;
-import org.mskcc.shenkers.imodel.Track;
+import java.net.URI;
 
 /**
  *
@@ -15,17 +16,19 @@ import org.mskcc.shenkers.imodel.Track;
  */
 public class TrackBuilderImpl implements TrackBuilder {
 
-    BamTrackFactory btf;
+    TrackFactory<BamContext> btf;
 
     @Inject
-    public TrackBuilderImpl(BamTrackFactory btf) {
+    public TrackBuilderImpl(TrackFactory<BamContext> btf) {
         this.btf = btf;
     }    
 
-    public Track load(FileType type, File file) {
+    public Track load(FileType type, String resource) {
         switch(type) {
             case BAM: {
-                return btf.create(file.getName(), file);
+                System.out.println("loading "+type+" "+resource);
+                BamContext context = new BamContext();
+                return btf.create(context);
             }
             default: {
                 throw new RuntimeException("No handler configured for "+type);

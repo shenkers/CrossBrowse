@@ -66,7 +66,7 @@
                             <goal>exec</goal>
                         </goals>
                         <configuration>
-                            <executable>${java.home}/../bin/javafxpackager</executable>
+                            <executable>${java.home}/../bin/javapackager</executable>
                             <arguments>
                                 <argument>-createjar</argument>
                                 <argument>-nocss2bin</argument>
@@ -146,13 +146,12 @@
         </dependency>
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-multibindings</artifactId>
+            <artifactId>guice-assistedinject</artifactId>
             <version>3.0</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.google.inject.extensions</groupId>
-            <artifactId>guice-assistedinject</artifactId>
+            <artifactId>guice-multibindings</artifactId>
             <version>3.0</version>
         </dependency>
     </dependencies>

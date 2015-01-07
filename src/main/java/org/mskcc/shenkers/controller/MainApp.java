@@ -14,27 +14,29 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import org.mskcc.shenkers.control.track.config.TrackConfiguration;
 
 public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-
-//        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Scene.fxml"));
+        Injector inj = Guice.createInjector(new TrackConfiguration());
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Scene.fxml"));
+        loader.setControllerFactory((Class<?> type)->{return inj.getInstance(type);});
 ////        loader.setRoot(this);
 ////        loader.setController(this);
 //
-//        try {
-//            Parent root = loader.load();
-//            Scene scene = new Scene(root);
-//        scene.getStylesheets().add("/styles/Styles.css");
-//
-//        stage.setTitle("JavaFX and Maven");
-//        stage.setScene(scene);
-//        stage.show();
-//        } catch (IOException e) {
-//            throw new RuntimeException(e);
-//        }
+        try {
+            Parent root = loader.load();
+            Scene scene = new Scene(root);
+        scene.getStylesheets().add("/styles/Styles.css");
+
+        stage.setTitle("JavaFX and Maven");
+        stage.setScene(scene);
+        stage.show();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 //        Injector inj = Guice.createInjector(new AbstractModule() {
 //            
 //            class ABC implements Serializable{
@@ -57,13 +59,13 @@ public class MainApp extends Application {
 //                
 //        );
 //        Serializable instance = inj.getInstance(Serializable.class);
-        Parent root = FXMLLoader.load(getClass().getResource("/fxml/Scene.fxml"));
-        Scene scene = new Scene(root);
-        scene.getStylesheets().add("/styles/Styles.css");
-        
-        stage.setTitle("JavaFX and Maven");
-        stage.setScene(scene);
-        stage.show();
+//        Parent root = FXMLLoader.load(getClass().getResource("/fxml/Scene.fxml"));
+//        Scene scene = new Scene(root);
+//        scene.getStylesheets().add("/styles/Styles.css");
+//        
+//        stage.setTitle("JavaFX and Maven");
+//        stage.setScene(scene);
+//        stage.show();
     }
 
     /**

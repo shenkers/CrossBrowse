@@ -3,13 +3,16 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.mskcc.shenkers.imodel;
+package org.mskcc.shenkers.control.track;
+
+import javafx.scene.Node;
 
 /**
  *
  * @author sol
  */
-public abstract class Track implements GenomeSpanListener{
+public interface View<T> {
     
-    public abstract String getName();
+    public Node getContent(T context);
+    
 }

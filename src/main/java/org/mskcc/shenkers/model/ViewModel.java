@@ -9,8 +9,8 @@ import com.sun.javafx.geom.Edge;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.mskcc.shenkers.control.track.Track;
 import org.mskcc.shenkers.imodel.AlignmentSource;
-import org.mskcc.shenkers.imodel.Track;
 import org.mskcc.shenkers.model.datatypes.Genome;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 

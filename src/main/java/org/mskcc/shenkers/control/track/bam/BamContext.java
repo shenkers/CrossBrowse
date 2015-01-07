@@ -3,12 +3,12 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.mskcc.shenkers.imodel;
+package org.mskcc.shenkers.control.track.bam;
 
 /**
  *
  * @author sol
  */
-public interface GenomeSpanListener {
+public class BamContext {
     
 }

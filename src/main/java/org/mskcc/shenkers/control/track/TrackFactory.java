@@ -11,6 +11,6 @@ import java.io.File;
  *
  * @author sol
  */
-public interface BamTrackFactory {
-    public BAMTrack create(String name, File bamFile);
+public interface TrackFactory<T> {
+    public Track<T> create(T context);
 }

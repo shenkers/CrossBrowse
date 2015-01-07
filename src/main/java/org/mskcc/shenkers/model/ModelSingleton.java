@@ -10,12 +10,14 @@ import java.util.HashMap;
 import org.mskcc.shenkers.model.datatypes.Genome;
 import java.util.List;
 import java.util.Map;
+import java.util.Observable;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
-import org.mskcc.shenkers.imodel.Track;
+import org.mskcc.shenkers.control.track.Track;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
 /**
@@ -29,8 +31,8 @@ public class ModelSingleton {
     private ModelSingleton() {
         genomes = FXCollections.observableArrayList();
         tracks = FXCollections.observableHashMap();
-        nTracks=0;
-        span = new SimpleObjectProperty<>(new GenomeSpan("", 0, 0, false));
+        nTracks = 0;
+        spans = FXCollections.observableHashMap();
     }
 
     public static synchronized ModelSingleton getInstance() {
@@ -41,44 +43,46 @@ public class ModelSingleton {
         return instance;
     }
 
-    Property<GenomeSpan> span;
     ObservableList<Genome> genomes;
-    Map<Genome,ObservableList<Track>> tracks;
-    
+    Map<Genome, ObservableList<Track>> tracks;
+    Map<Genome, Property<GenomeSpan>> spans;
+
     private int nTracks;
 
-    public Property<GenomeSpan> genomeSpanProperty(){
-        return span;
-    }
-    
-    public GenomeSpan getSpan() {
-            return span.getValue();
+    public ObservableValue<GenomeSpan> getSpan(Genome g) {
+        return spans.get(g);
     }
 
-    public void setSpan(GenomeSpan span) {
-            this.span.setValue(span);
+    public void setSpan(Genome g, GenomeSpan span) {
+        this.spans.get(g).setValue(span);
     }
     
-    public void addTrack(Genome g, Track track){
+    public void setSpan(GenomeSpan span) {
+        spans.values().stream().forEach(v -> {v.setValue(span);});
+    }
+
+    public void addTrack(Genome g, Track track) {
         tracks.get(g).add(track);
+        track.getSpan().bind(getSpan(g));
         setnTracks(getnTracks() + 1);
     }
-    
-    public void removeTrack(Genome g, Node track){
+
+    public void removeTrack(Genome g, Track track) {
         tracks.get(g).remove(track);
         setnTracks(getnTracks() - 1);
     }
-    
-    public ObservableList<Genome> getGenomes(){
+
+    public ObservableList<Genome> getGenomes() {
         return genomes;
     }
-    
-    public void addGenome(Genome g){
+
+    public void addGenome(Genome g) {
         tracks.put(g, FXCollections.observableArrayList());
+        spans.put(g, new SimpleObjectProperty<>(new GenomeSpan("", 0, 0, false)));
         genomes.add(g);
     }
-    
-    public void removeTrack(Genome g){
+
+    public void removeTrack(Genome g) {
         tracks.remove(g);
         genomes.remove(g);
     }

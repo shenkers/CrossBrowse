@@ -1,15 +1,21 @@
 package org.mskcc.shenkers.controller;
 
+import com.google.inject.Inject;
 import com.sun.javafx.binding.ContentBinding;
 import java.io.File;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.function.Function;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javafx.beans.Observable;
 import javafx.beans.binding.Binding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ListBinding;
@@ -32,9 +38,11 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
@@ -49,7 +57,10 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
 import org.fxmisc.easybind.EasyBind;
-import org.mskcc.shenkers.imodel.Track;
+import org.mskcc.shenkers.control.track.FileType;
+import org.mskcc.shenkers.control.track.TrackBuilder;
+import org.mskcc.shenkers.control.track.Track;
+import org.mskcc.shenkers.control.track.View;
 import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.SimpleTrack;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -77,6 +88,14 @@ public class FXMLController implements Initializable {
 
     @FXML
     BorderPane stp;
+
+    TrackBuilder trackBuilder;
+
+    @Inject
+    private void setTrackBuilder(TrackBuilder b) {
+        System.out.println("injecting track builder");
+        this.trackBuilder = b;
+    }
 
     @FXML
     private void handleButtonAction(ActionEvent event) {
@@ -225,12 +244,16 @@ public class FXMLController implements Initializable {
             System.err.println(buttonType.getText());
             if (buttonType.equals(ButtonType.OK)) {
                 System.err.println("finished");
-                Track t = new Track() {
-                    public String getName() {
-                        return selectedFile.getText();
-                    }
-                };
+//                Track t = new Track() {
+//                    public String getName() {
+//                        return selectedFile.getText();
+//                    }
+//                };
+
+                Track t = trackBuilder.load(FileType.BAM, selectedFile.getText());
+
                 Genome selectedGenome = genomeSelector.getSelectionModel().getSelectedItem();
+
                 model.addTrack(selectedGenome, t);
             }
             if (buttonType.equals(ButtonType.CANCEL)) {
@@ -279,7 +302,7 @@ public class FXMLController implements Initializable {
          }
          }
          */
-        genomeSplitPaneNodes = EasyBind.map(genomes,
+        genomeSplitPaneNodes = EasyBind.map(model.getGenomes(),
                 (Genome g) -> {
                     String text = String.format("%s:%s", g.getId(), g.getDescription());
                     System.out.println(text);
@@ -309,12 +332,31 @@ public class FXMLController implements Initializable {
         // displayed in the split pane
         genomes.addListener(new ListChangeListener<Genome>() {
 
-            class TrackCell extends ListCell<Track> {
+            class TrackCell<T> extends ListCell<Track<T>> {
 
-                protected void updateItem(Track item, boolean empty) {
+                protected void updateItem(Track<T> item, boolean empty) {
                     super.updateItem(item, empty);
                     if (item != null) {
-                        setGraphic(new Label(item.getName()));
+                        // set the graphic for the track
+                        setGraphic(item.getContent());
+                        
+                        // add the context menu so the track can be configured 
+                        // and the view strategy changed
+                        
+                        MenuItem[] items = item.getViews().stream().map(
+                                (View<T> v) -> {
+                                    MenuItem mi = new MenuItem(v.toString());
+                                    mi.setOnAction(
+                                            (ActionEvent event) -> {    
+                                                item.setView(v);
+                                            }
+                                    );
+                                    return mi;
+                                }
+                        ).collect(Collectors.toList()).toArray(new MenuItem[0]);
+                        ContextMenu menu = new ContextMenu(items);
+                        setContextMenu(menu);
+                        
                     }
                 }
             }
@@ -324,31 +366,61 @@ public class FXMLController implements Initializable {
                 System.out.println("changed genomes");
                 genomeSplitPaneNodes.clear();
 
-                Function<Genome, ListView<String>> createListView = (Genome g) -> {
-                    ListView<String> trackListView = new ListView<>();
+                Function<Genome, ListView<Track>> createListView = (Genome g) -> {
+                    ListView<Track> trackListView = new ListView<>();
 
-                    model.getTracks(g).addListener(new ListChangeListener<Track>() {
+//                    model.getTracks(g).addListener(new ListChangeListener<Track>() {
+//                        public void onChanged(ListChangeListener.Change<? extends Track> c) {
+////                            List<String> map = model.getTracks(g).stream().map(Track::getName).collect(Collectors.toList());
+//                            List<Track> map = model.getTracks(g);
+//                            
+//                            trackListView.getItems().setAll(map);
+//                        }
+//                    });
+                    ObservableList<Track> tracks = model.getTracks(g);
+                    Callback<Track, Observable[]> extractor = new Callback<Track, Observable[]>() {
+
+                        @Override
+                        public Observable[] call(Track param) {
+                            return new Observable[]{param.getSpan(), param.getView()};
+                        }
+                    };
+
+                    ObservableList<Track> observableTrackList = FXCollections.observableArrayList(extractor);
+                    Bindings.bindContent(observableTrackList, tracks);
+                    observableTrackList.addListener(new ListChangeListener<Track>() {
+
+                        @Override
                         public void onChanged(ListChangeListener.Change<? extends Track> c) {
-                            List<String> map = model.getTracks(g).stream().map(Track::getName).collect(Collectors.toList());
-                            trackListView.getItems().setAll(map);
+                            while (c.next()) {
+                                if (c.wasUpdated()) {
+                                    System.out.println("list update (span) detected");
+                                }
+                            }
                         }
                     });
-                    
-                    List<String> map = model.getTracks(g).stream().map(Track::getName).collect(Collectors.toList());
-                    trackListView.getItems().setAll(map);
+
+                    trackListView.setItems(observableTrackList);
+
+                    trackListView.setCellFactory((ListView<Track> view) -> {
+                        TrackCell cell = new TrackCell();
+                        return cell;
+                    });
+
                     return trackListView;
                 };
 
                 if (genomes.size() > 0) {
                     Genome g = genomes.get(0);
-                    ListView<String> apply = createListView.apply(g);
+                    ListView<Track> apply = createListView.apply(g);
                     genomeSplitPaneNodes.add(apply);
                 }
                 for (int i = 1; i < genomes.size(); i++) {
+                    // add a track to represent the alignment between sequential genomes
                     genomeSplitPaneNodes.add(f2.apply(f3.apply(genomes.get(i - 1)) + " aligned to " + f3.apply(genomes.get(i))));
 //                    genomeSplitPaneNodes.add(f.apply(genomes.get(i)));
                     Genome g = genomes.get(i);
-                    ListView<String> apply = createListView.apply(g);
+                    ListView<Track> apply = createListView.apply(g);
                     genomeSplitPaneNodes.add(apply);
                 }
             }
@@ -419,7 +491,7 @@ public class FXMLController implements Initializable {
         Label lbl = new Label("hi");
 
         sim = new SimpleTrack();
-        ModelSingleton.getInstance().genomeSpanProperty().addListener(sim);
+//        ModelSingleton.getInstance().genomeSpanProperty().addListener(sim);
         stp.setCenter(sim);
 
 //        lv1.widthProperty().addListener(

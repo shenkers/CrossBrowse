@@ -6,7 +6,7 @@
 package org.mskcc.shenkers.control.track;
 
 import java.io.File;
-import org.mskcc.shenkers.imodel.Track;
+import java.net.URI;
 
 /**
  *
@@ -14,5 +14,5 @@ import org.mskcc.shenkers.imodel.Track;
  */
 public interface TrackBuilder {
 
-    public Track load(FileType type, File file);
+    public Track load(FileType type, String resource);
 }
