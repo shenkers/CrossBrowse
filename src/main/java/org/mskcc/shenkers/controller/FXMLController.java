@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.ResourceBundle;
 import java.util.function.Function;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javafx.beans.Observable;
@@ -56,6 +55,8 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fxmisc.easybind.EasyBind;
 import org.mskcc.shenkers.control.track.FileType;
 import org.mskcc.shenkers.control.track.TrackBuilder;
@@ -67,6 +68,8 @@ import org.mskcc.shenkers.model.datatypes.Genome;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
 public class FXMLController implements Initializable {
+    
+    private static final Logger logger = LogManager.getLogger();
 
     ModelSingleton model = ModelSingleton.getInstance();
 
@@ -183,6 +186,7 @@ public class FXMLController implements Initializable {
 
     @FXML
     private void loadTrack(ActionEvent event) {
+        logger.info("Loading track...");
         System.out.println("loading track...");
 
         GridPane gp1 = new GridPane();
@@ -253,8 +257,10 @@ public class FXMLController implements Initializable {
                 Track t = trackBuilder.load(FileType.BAM, selectedFile.getText());
 
                 Genome selectedGenome = genomeSelector.getSelectionModel().getSelectedItem();
+                t.getSpan().bind(model.getSpan(selectedGenome));
 
                 model.addTrack(selectedGenome, t);
+
             }
             if (buttonType.equals(ButtonType.CANCEL)) {
                 System.err.println("Canceled");
@@ -339,15 +345,14 @@ public class FXMLController implements Initializable {
                     if (item != null) {
                         // set the graphic for the track
                         setGraphic(item.getContent());
-                        
+
                         // add the context menu so the track can be configured 
                         // and the view strategy changed
-                        
                         MenuItem[] items = item.getViews().stream().map(
                                 (View<T> v) -> {
                                     MenuItem mi = new MenuItem(v.toString());
                                     mi.setOnAction(
-                                            (ActionEvent event) -> {    
+                                            (ActionEvent event) -> {
                                                 item.setView(v);
                                             }
                                     );
@@ -356,7 +361,7 @@ public class FXMLController implements Initializable {
                         ).collect(Collectors.toList()).toArray(new MenuItem[0]);
                         ContextMenu menu = new ContextMenu(items);
                         setContextMenu(menu);
-                        
+
                     }
                 }
             }

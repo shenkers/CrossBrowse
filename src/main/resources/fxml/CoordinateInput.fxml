@@ -9,6 +9,7 @@
 
 <FlowPane fx:id="child" hgap="10.0" maxHeight="17.0" prefHeight="17.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.mskcc.shenkers.controller.CoordinateInputController">
    <children>
+      <ComboBox fx:id="genomeSelected" promptText="Genome" visibleRowCount="5" />
       <Label text="Coordinate" />
       <TextField fx:id="coordinateField" />
       <Button fx:id="goButton" onAction="#parseAndUpdateCoordinates" text="Go" />
