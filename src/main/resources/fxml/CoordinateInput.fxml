@@ -14,7 +14,6 @@
       <TextField fx:id="coordinateField" />
       <Button fx:id="goButton" onAction="#parseAndUpdateCoordinates" text="Go" />
       <Button mnemonicParsing="false" onAction="#zoomIn" text="+" />
-      <Slider />
       <Button mnemonicParsing="false" text="-" />
       <Button mnemonicParsing="false" text="Flip" />
    </children>

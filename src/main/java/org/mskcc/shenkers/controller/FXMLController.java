@@ -9,7 +9,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.ResourceBundle;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -19,6 +21,7 @@ import javafx.beans.binding.Binding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ListBinding;
 import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.Property;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -62,6 +65,7 @@ import org.mskcc.shenkers.control.track.FileType;
 import org.mskcc.shenkers.control.track.TrackBuilder;
 import org.mskcc.shenkers.control.track.Track;
 import org.mskcc.shenkers.control.track.View;
+import org.mskcc.shenkers.control.track.bam.BamContext;
 import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.SimpleTrack;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -254,10 +258,18 @@ public class FXMLController implements Initializable {
 //                    }
 //                };
 
-                Track t = trackBuilder.load(FileType.BAM, selectedFile.getText());
+                Track<BamContext> t = trackBuilder.load(FileType.BAM, selectedFile.getText());
 
                 Genome selectedGenome = genomeSelector.getSelectionModel().getSelectedItem();
+                
+                // bind the span property of this track to the model
                 t.getSpan().bind(model.getSpan(selectedGenome));
+                
+                t.getSpan().addListener(new ChangeListener<Optional<GenomeSpan>>() {
+                    public void changed(ObservableValue<? extends Optional<GenomeSpan>> observable, Optional<GenomeSpan> oldValue, Optional<GenomeSpan> newValue) {
+                        logger.info("span change detected in track "+t);
+                    }
+                });
 
                 model.addTrack(selectedGenome, t);
 
@@ -338,7 +350,8 @@ public class FXMLController implements Initializable {
         // displayed in the split pane
         genomes.addListener(new ListChangeListener<Genome>() {
 
-            class TrackCell<T> extends ListCell<Track<T>> {
+            class TrackCell<T> extends ListCell<Track<T>> {               
+                
 
                 protected void updateItem(Track<T> item, boolean empty) {
                     super.updateItem(item, empty);
@@ -409,6 +422,7 @@ public class FXMLController implements Initializable {
 
                     trackListView.setCellFactory((ListView<Track> view) -> {
                         TrackCell cell = new TrackCell();
+                        cell.setPrefHeight(100);
                         return cell;
                     });
 

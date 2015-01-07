@@ -13,7 +13,18 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Types;
 import java.lang.reflect.ParameterizedType;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+import javafx.beans.property.Property;
+import javafx.beans.property.SimpleObjectProperty;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -62,6 +73,30 @@ public class SamDataSourceTest {
     }
 
     @org.junit.Test
+    public void testOptionalProperty() {
+        Property<Optional<String>> pos = new SimpleObjectProperty<>(Optional.empty());
+        Map<String, Property<Optional<String>>> m = new HashMap<>();
+        m.put("key", pos);
+        
+        System.out.println(m.get("key"));
+
+        Optional<String> reversed = pos.getValue().flatMap((String s) -> Optional.of(new StringBuilder(s).reverse().toString()));
+
+        reversed.ifPresent((s) -> System.out.println("present: " + s));
+        System.out.println("get orElse: " + reversed.map(Function.identity()).orElse("not present"));
+
+//        pos.setValue(Optional.of("HelloWorld"));
+        
+        m.get("key").setValue(Optional.of("HelloWorld"));
+        System.out.println(m.get("key"));
+        
+        reversed = pos.getValue().flatMap((String s) -> Optional.of(new StringBuilder(s).reverse().toString()));
+        reversed.ifPresent((s) -> System.out.println("present: " + s));
+        System.out.println("get orElse: " + reversed.map(Function.identity()).orElse("not present"));
+
+    }
+
+    @org.junit.Test
     public void testSomeMethod() {
 
         Injector inj;
@@ -72,7 +107,7 @@ public class SamDataSourceTest {
 //            }
             @Override
             protected void configure() {
-                
+
                 {
 //                    bind(TrackBuilder.class).to(TrackBuilderImpl.class);
 //                    bind(BamView.class).to(BamViewImpl.class);
@@ -101,9 +136,10 @@ public class SamDataSourceTest {
                 }
             }
         });
-        
+
         {
-            TrackFactory<BamContext> instance = inj.getInstance(Key.get(new TypeLiteral<TrackFactory<BamContext>>(){}));
+            TrackFactory<BamContext> instance = inj.getInstance(Key.get(new TypeLiteral<TrackFactory<BamContext>>() {
+            }));
             System.out.println(instance);
         }
 
@@ -142,8 +178,9 @@ public class SamDataSourceTest {
                 System.out.println("is not data source: " + at.getCanonicalName());
             }
         }
-        if(false)
-        fail("The test case is a prototype.");
+        if (false) {
+            fail("The test case is a prototype.");
+        }
 
     }
 

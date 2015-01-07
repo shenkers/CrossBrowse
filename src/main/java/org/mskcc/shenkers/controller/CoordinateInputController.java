@@ -7,6 +7,7 @@ package org.mskcc.shenkers.controller;
 
 import javafx.fxml.FXML;
 import java.net.URL;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.function.Predicate;
 import java.util.regex.Matcher;
@@ -53,6 +54,8 @@ public class CoordinateInputController implements Initializable {
 
     @FXML
     public void parseAndUpdateCoordinates(ActionEvent event) {
+        Genome g = genomeSelected.getSelectionModel().getSelectedItem();
+        if(g!=null){
         String text = coordinateField.getText();
         Matcher mat = coordinatePattern.matcher(text);
 
@@ -69,14 +72,15 @@ public class CoordinateInputController implements Initializable {
 
             System.out.printf("%s %d %d %b\n", chr, start, end, isNegativeStrand);
 
-            Genome g = genomeSelected.getSelectionModel().getSelectedItem();
+            
             GenomeSpan span = new GenomeSpan(chr, start, end, isNegativeStrand);
-            model.setSpan(g, span);
+            
+            model.setSpan(g, Optional.of(span));
         } else {
             // notify error
             System.out.println("no-match");
         }
-
+        }
     }
 
     @FXML

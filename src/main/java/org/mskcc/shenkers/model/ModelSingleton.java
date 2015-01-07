@@ -11,12 +11,15 @@ import org.mskcc.shenkers.model.datatypes.Genome;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
+import java.util.Optional;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mskcc.shenkers.control.track.Track;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
@@ -25,6 +28,8 @@ import org.mskcc.shenkers.model.datatypes.GenomeSpan;
  * @author sol
  */
 public class ModelSingleton {
+
+    private static final Logger logger = LogManager.getLogger();
 
     private static ModelSingleton instance = null;
 
@@ -45,20 +50,19 @@ public class ModelSingleton {
 
     ObservableList<Genome> genomes;
     Map<Genome, ObservableList<Track>> tracks;
-    Map<Genome, Property<GenomeSpan>> spans;
+    Map<Genome, Property<Optional<GenomeSpan>>> spans;
 
     private int nTracks;
 
-    public ObservableValue<GenomeSpan> getSpan(Genome g) {
+    public ObservableValue<Optional<GenomeSpan>> getSpan(Genome g) {
         return spans.get(g);
     }
 
-    public void setSpan(Genome g, GenomeSpan span) {
+    public void setSpan(Genome g, Optional<GenomeSpan> span) {
+        logger.info("genome {}",g);
+        logger.info("spans.get(g) {}",spans.get(g));
+        logger.info("span {}",span);
         this.spans.get(g).setValue(span);
-    }
-    
-    public void setSpan(GenomeSpan span) {
-        spans.values().stream().forEach(v -> {v.setValue(span);});
     }
 
     public void addTrack(Genome g, Track track) {
@@ -78,7 +82,7 @@ public class ModelSingleton {
 
     public void addGenome(Genome g) {
         tracks.put(g, FXCollections.observableArrayList());
-        spans.put(g, new SimpleObjectProperty<>(new GenomeSpan("", 0, 0, false)));
+        spans.put(g, new SimpleObjectProperty<>(Optional.empty()));
         genomes.add(g);
     }
 

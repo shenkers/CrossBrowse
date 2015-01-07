@@ -6,6 +6,7 @@
 package org.mskcc.shenkers.control.track;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javafx.beans.property.Property;
@@ -35,7 +36,7 @@ public class Track<T> {
 
     List<View<T>> availableViews;
 
-    Property<GenomeSpan> span;
+    Property<Optional<GenomeSpan>> span;
 
     public Track(T context, List<View<T>> availableViews) {
         this.dataContext = context;
@@ -70,10 +71,6 @@ public class Track<T> {
         
         span = new SimpleObjectProperty<>();
         
-        span.addListener((ObservableValue<? extends GenomeSpan> observable, GenomeSpan oldValue, GenomeSpan newValue) -> {
-            Node content = displayedView.getValue().getContent(this.dataContext);
-            
-        });
     }
     
     public void setView(View<T> v){
@@ -88,7 +85,7 @@ public class Track<T> {
         return availableViews;
     }
     
-    public Property<GenomeSpan> getSpan(){
+    public Property<Optional<GenomeSpan>> getSpan(){
         return span;
     }
     

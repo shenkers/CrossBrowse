@@ -77,7 +77,7 @@ public class GenomeSpan {
 
     @Override
     public String toString() {
-        return chr+":"+start+"-"+":"+end+":"+(isNegativeStrand() ? '-' : '+');
+        return chr+":"+start+":"+end+":"+(isNegativeStrand() ? '-' : '+');
     }
     
     
