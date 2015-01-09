@@ -16,10 +16,13 @@ import javafx.beans.binding.When;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
 import javafx.scene.Node;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
 import javafx.scene.shape.Rectangle;
@@ -35,11 +38,7 @@ public class LineHistogramView {
 
     private static final Logger logger = LogManager.getLogger();
     
-    Group graphic;
-
-    // the dimensions of the graphic
-    DoubleProperty widthProperty;
-    DoubleProperty heightProperty;
+    Pane graphic;
 
     // the range of data plotted
     DoubleProperty minProperty;
@@ -55,8 +54,6 @@ public class LineHistogramView {
     NumberBinding zero;
 
     public LineHistogramView() {
-        widthProperty = new SimpleDoubleProperty(1);
-        heightProperty = new SimpleDoubleProperty(1);
 
         minProperty = new SimpleDoubleProperty(0);
         maxProperty = new SimpleDoubleProperty(1);
@@ -64,20 +61,22 @@ public class LineHistogramView {
         flipDomainProperty=new SimpleBooleanProperty(false);
         flipRangeProperty=new SimpleBooleanProperty(true);
 
+        graphic = new BorderPane();
+        
         background = new Rectangle();
 
         background.setFill(Color.WHITE);
         background.setStroke(Color.WHITE);
 
-        background.widthProperty().bind(widthProperty);
-        background.heightProperty().bind(heightProperty);
+        background.widthProperty().bind(graphic.widthProperty());
+        background.heightProperty().bind(graphic.heightProperty());
 
-        graphic = new Group(background);
+        graphic.getChildren().add(background);
         
         zero = bindToRange(0);
     }
 
-    public Node getGraphic() {
+    public Pane getGraphic() {
         return graphic;
     }
     
@@ -112,7 +111,7 @@ public class LineHistogramView {
 
         Line line = new Line(0., 0., 0., 1.);
         
-        DoubleBinding domainBinding = new When(flipDomainProperty).then((l-(i + 1.)) / (l + 1)).otherwise((i + 1.) / (l + 1)).multiply(widthProperty);
+        DoubleBinding domainBinding = new When(flipDomainProperty).then((l-(i + 1.)) / (l + 1)).otherwise((i + 1.) / (l + 1)).multiply(graphic.widthProperty());
 
         line.startXProperty().bind(domainBinding);
         line.endXProperty().bind(domainBinding);
@@ -130,17 +129,17 @@ public class LineHistogramView {
         NumberBinding base = new When(minProperty.greaterThan(d)).then(minProperty).otherwise(whetherZeroGreaterThanMax);
         NumberBinding flipped = new When(flipRangeProperty).then(base.multiply(-1).add(1)).otherwise(base);
         
-        NumberBinding scaled = flipped.multiply(heightProperty);
+        NumberBinding scaled = flipped.multiply(graphic.heightProperty());
 
         return scaled;
     }
 
-    public DoubleProperty widthProperty() {
-        return widthProperty;
+    public ReadOnlyDoubleProperty widthProperty() {
+        return graphic.widthProperty();
     }
     
-    public DoubleProperty heightProperty() {
-        return heightProperty;
+    public ReadOnlyDoubleProperty heightProperty() {
+        return graphic.heightProperty();
     }
     
     public BooleanProperty flipDomainProperty(){

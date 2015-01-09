@@ -5,7 +5,7 @@
  */
 package org.mskcc.shenkers.control.track;
 
-import javafx.scene.Node;
+import javafx.scene.layout.Pane;
 
 /**
  *
@@ -13,6 +13,6 @@ import javafx.scene.Node;
  */
 public interface View<T> {
     
-    public Node getContent(T context);
+    public Pane getContent(T context);
     
 }

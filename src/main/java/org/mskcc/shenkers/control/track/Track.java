@@ -21,6 +21,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import org.fxmisc.easybind.EasyBind;
 import org.fxmisc.easybind.monadic.MonadicBinding;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
@@ -29,7 +30,7 @@ import org.mskcc.shenkers.model.datatypes.GenomeSpan;
  *
  * @author sol
  */
-public class Track<T> {
+public class Track<T extends AbstractContext> {
 
     T dataContext;
     Property<View<T>> displayedView;
@@ -44,7 +45,7 @@ public class Track<T> {
         this.displayedView = new SimpleObjectProperty(new View<T>(){
             
             @Override
-            public Node getContent(T context) {
+            public Pane getContent(T context) {
               
                 Label label = new Label("EMPTY");
 //                  MenuItem[] items = availableViews.stream().map((View<T> t) ->{
@@ -69,8 +70,8 @@ public class Track<T> {
             }
         });
         
-        span = new SimpleObjectProperty<>();
-        
+        span = new SimpleObjectProperty<>(Optional.empty());
+        context.spanProperty().bind(span);
     }
     
     public void setView(View<T> v){
@@ -93,8 +94,8 @@ public class Track<T> {
         return this.toString();
     }
     
-    public Node getContent(){
-        Node content = displayedView.getValue().getContent(this.dataContext);
+    public Pane getContent(){
+        Pane content = displayedView.getValue().getContent(this.dataContext);
         return content;
     }
 }

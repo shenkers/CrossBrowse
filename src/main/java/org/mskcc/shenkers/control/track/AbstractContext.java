@@ -6,6 +6,8 @@
 package org.mskcc.shenkers.control.track;
 
 import java.util.Optional;
+import javafx.beans.property.Property;
+import javafx.beans.property.SimpleObjectProperty;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
 /**
@@ -14,5 +16,27 @@ import org.mskcc.shenkers.model.datatypes.GenomeSpan;
  */
 public abstract class AbstractContext {
     
-    Optional<GenomeSpan> span;
+    private Property<Optional<GenomeSpan>> span;
+
+    public AbstractContext() {
+        this.span = new SimpleObjectProperty<>(Optional.empty());
+    }
+    
+    
+
+    /**
+     * @return the span
+     */
+    public Property<Optional<GenomeSpan>> spanProperty() {
+        return span;
+    }
+
+    /**
+     * @param span the span to set
+     */
+    public void setSpan(GenomeSpan span) {
+        this.span.setValue(Optional.of(span));
+    }
+    
+    
 }

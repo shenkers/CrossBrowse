@@ -20,6 +20,7 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mskcc.shenkers.control.track.AbstractContext;
 import org.mskcc.shenkers.control.track.Track;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
@@ -49,7 +50,7 @@ public class ModelSingleton {
     }
 
     ObservableList<Genome> genomes;
-    Map<Genome, ObservableList<Track>> tracks;
+    Map<Genome, ObservableList<Track<AbstractContext>>> tracks;
     Map<Genome, Property<Optional<GenomeSpan>>> spans;
 
     private int nTracks;
@@ -105,7 +106,7 @@ public class ModelSingleton {
         this.nTracks = nTracks;
     }
 
-    public ObservableList<Track> getTracks(Genome g) {
+    public ObservableList<Track<AbstractContext>> getTracks(Genome g) {
         return tracks.get(g);
     }
 

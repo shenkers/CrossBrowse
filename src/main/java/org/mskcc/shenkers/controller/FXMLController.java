@@ -33,6 +33,7 @@ import javafx.collections.ObservableListBase;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
@@ -63,6 +64,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.fxmisc.easybind.EasyBind;
+import org.mskcc.shenkers.control.track.AbstractContext;
 import org.mskcc.shenkers.control.track.FileType;
 import org.mskcc.shenkers.control.track.TrackBuilder;
 import org.mskcc.shenkers.control.track.Track;
@@ -302,10 +304,11 @@ public class FXMLController implements Initializable {
             double[] data = ArrayUtils.toPrimitive(collect.toArray(new Double[0]));
 
             lhv.setData(data);
-            lhv.widthProperty().bind(histogram.widthProperty());
-            lhv.heightProperty().bind(histogram.heightProperty());
+//            lhv.widthProperty().bind(histogram.widthProperty());
+//            lhv.heightProperty().bind(histogram.heightProperty());
             lhv.setMin(-1);
             lhv.setMax(1);
+            
 
             histogram.getChildren().add(lhv.getGraphic());
         }
@@ -316,8 +319,8 @@ public class FXMLController implements Initializable {
             double[] data = ArrayUtils.toPrimitive(collect.toArray(new Double[0]));
 
             lhv.setData(data);
-            lhv.widthProperty().bind(histogram2.widthProperty());
-            lhv.heightProperty().bind(histogram2.heightProperty());
+//            lhv.widthProperty().bind(histogram2.widthProperty());
+//            lhv.heightProperty().bind(histogram2.heightProperty());
             lhv.setMin(-1);
             lhv.setMax(1);
             lhv.setFlipDomain(true);
@@ -387,13 +390,22 @@ public class FXMLController implements Initializable {
         // displayed in the split pane
         genomes.addListener(new ListChangeListener<Genome>() {
 
-            class TrackCell<T> extends ListCell<Track<T>> {
+            class TrackCell<T extends AbstractContext> extends ListCell<Track<T>> {
+
+                public TrackCell() {
+                    setPadding(new Insets(1));
+                }
+                
+                
 
                 protected void updateItem(Track<T> item, boolean empty) {
                     super.updateItem(item, empty);
-                    if (item != null) {
+                    
+                    if (!empty && item != null) {
+                        Pane node = item.getContent();
+                        
                         // set the graphic for the track
-                        setGraphic(item.getContent());
+                        setGraphic(new BorderPane(node));
 
                         // add the context menu so the track can be configured 
                         // and the view strategy changed
@@ -420,8 +432,8 @@ public class FXMLController implements Initializable {
                 System.out.println("changed genomes");
                 genomeSplitPaneNodes.clear();
 
-                Function<Genome, ListView<Track>> createListView = (Genome g) -> {
-                    ListView<Track> trackListView = new ListView<>();
+                Function<Genome, ListView<Track<AbstractContext>>> createListView = (Genome g) -> {
+                    ListView<Track<AbstractContext>> trackListView = new ListView<>();
 
 //                    model.getTracks(g).addListener(new ListChangeListener<Track>() {
 //                        public void onChanged(ListChangeListener.Change<? extends Track> c) {
@@ -431,16 +443,17 @@ public class FXMLController implements Initializable {
 //                            trackListView.getItems().setAll(map);
 //                        }
 //                    });
-                    ObservableList<Track> tracks = model.getTracks(g);
-                    Callback<Track, Observable[]> extractor = new Callback<Track, Observable[]>() {
+                    ObservableList<Track<AbstractContext>> tracks = model.getTracks(g);
+                    Callback<Track<AbstractContext>, Observable[]> extractor = new Callback<Track<AbstractContext>, Observable[]>() {
 
                         @Override
-                        public Observable[] call(Track param) {
+                        public Observable[] call(Track<AbstractContext> param) {
+                            // TODO if there are other features that need to trigger updates, add them here
                             return new Observable[]{param.getSpan(), param.getView()};
                         }
                     };
 
-                    ObservableList<Track> observableTrackList = FXCollections.observableArrayList(extractor);
+                    ObservableList<Track<AbstractContext>> observableTrackList = FXCollections.observableArrayList(extractor);
                     Bindings.bindContent(observableTrackList, tracks);
                     observableTrackList.addListener(new ListChangeListener<Track>() {
 
@@ -456,8 +469,8 @@ public class FXMLController implements Initializable {
 
                     trackListView.setItems(observableTrackList);
 
-                    trackListView.setCellFactory((ListView<Track> view) -> {
-                        TrackCell cell = new TrackCell();
+                    trackListView.setCellFactory((ListView<Track<AbstractContext>> view) -> {
+                        TrackCell<AbstractContext> cell = new TrackCell<AbstractContext>();
                         cell.setPrefHeight(100);
                         return cell;
                     });
@@ -467,7 +480,7 @@ public class FXMLController implements Initializable {
 
                 if (genomes.size() > 0) {
                     Genome g = genomes.get(0);
-                    ListView<Track> apply = createListView.apply(g);
+                    ListView<Track<AbstractContext>> apply = createListView.apply(g);
                     genomeSplitPaneNodes.add(apply);
                 }
                 for (int i = 1; i < genomes.size(); i++) {
@@ -475,7 +488,7 @@ public class FXMLController implements Initializable {
                     genomeSplitPaneNodes.add(f2.apply(f3.apply(genomes.get(i - 1)) + " aligned to " + f3.apply(genomes.get(i))));
 //                    genomeSplitPaneNodes.add(f.apply(genomes.get(i)));
                     Genome g = genomes.get(i);
-                    ListView<Track> apply = createListView.apply(g);
+                    ListView<Track<AbstractContext>> apply = createListView.apply(g);
                     genomeSplitPaneNodes.add(apply);
                 }
             }

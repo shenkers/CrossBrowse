@@ -10,7 +10,8 @@ import java.io.File;
 /**
  *
  * @author sol
+ * @param <T>
  */
-public interface TrackFactory<T> {
+public interface TrackFactory<T extends AbstractContext> {
     public Track<T> create(T context);
 }

@@ -7,6 +7,8 @@ package org.mskcc.shenkers.control.track;
 
 import org.mskcc.shenkers.control.track.bam.BamContext;
 import com.google.inject.Inject;
+import htsjdk.samtools.SamReader;
+import htsjdk.samtools.SamReaderFactory;
 import java.io.File;
 import java.net.URI;
 
@@ -27,7 +29,8 @@ public class TrackBuilderImpl implements TrackBuilder {
         switch(type) {
             case BAM: {
                 System.out.println("loading "+type+" "+resource);
-                BamContext context = new BamContext();
+                SamReader reader = SamReaderFactory.makeDefault().open(new File(resource));
+                BamContext context = new BamContext(reader);
                 return btf.create(context);
             }
             default: {

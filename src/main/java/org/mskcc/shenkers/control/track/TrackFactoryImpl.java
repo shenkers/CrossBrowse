@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Set;
 
 
-public class TrackFactoryImpl<T> implements TrackFactory<T> {
+public class TrackFactoryImpl<T extends AbstractContext> implements TrackFactory<T> {
 
     List<View<T>> views;
 

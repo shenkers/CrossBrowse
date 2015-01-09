@@ -7,6 +7,8 @@ package org.mskcc.shenkers.control.track.bam;
 
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
 import org.mskcc.shenkers.control.track.View;
 
 /**
@@ -16,8 +18,8 @@ import org.mskcc.shenkers.control.track.View;
 public class BamView2 implements View<BamContext>{
 
     @Override
-    public Node getContent(BamContext context) {
-        return new Label("bamview2");
+    public Pane getContent(BamContext context) {
+        return new BorderPane(new Label("bamview2"));
     }
     
 }
