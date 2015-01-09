@@ -23,7 +23,9 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.Property;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -74,6 +76,13 @@ public class SamDataSourceTest {
 
     @org.junit.Test
     public void testOptionalProperty() {
+        
+        DoubleProperty dp = new SimpleDoubleProperty(1);
+        
+        System.out.println(dp);
+        System.out.println(dp.multiply(2.).get());
+//        System.exit(0);
+        
         Property<Optional<String>> pos = new SimpleObjectProperty<>(Optional.empty());
         Map<String, Property<Optional<String>>> m = new HashMap<>();
         m.put("key", pos);

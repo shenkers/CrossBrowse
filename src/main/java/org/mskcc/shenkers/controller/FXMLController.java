@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import javafx.beans.Observable;
 import javafx.beans.binding.Binding;
@@ -58,6 +59,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 import javafx.util.StringConverter;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.fxmisc.easybind.EasyBind;
@@ -70,15 +72,19 @@ import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.SimpleTrack;
 import org.mskcc.shenkers.model.datatypes.Genome;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
+import org.mskcc.shenkers.view.LineHistogramView;
 
 public class FXMLController implements Initializable {
-    
+
     private static final Logger logger = LogManager.getLogger();
 
     ModelSingleton model = ModelSingleton.getInstance();
 
     @FXML
-    GridPane gridpane;
+    Pane histogram;
+
+    @FXML
+    Pane histogram2;
 
     @FXML
     ListView<String> lv;
@@ -115,11 +121,11 @@ public class FXMLController implements Initializable {
         Label child = new Label("c=0,r=" + rowIndex);
         Label child2 = new Label("c=1,r=" + rowIndex);
 
-        gridpane.addRow(rowIndex, child, child2);
-//        gridpane.setConstraints(child, 0, rowIndex, 1, 1, HPos.CENTER, VPos.CENTER, Priority.ALWAYS, Priority.ALWAYS);
-        gridpane.getRowConstraints().add(new RowConstraints());
-        gridpane.getRowConstraints().get(rowIndex).setValignment(VPos.TOP);
-        gridpane.getRowConstraints().get(rowIndex).setVgrow(Priority.ALWAYS);
+//        gridpane.addRow(rowIndex, child, child2);
+////        gridpane.setConstraints(child, 0, rowIndex, 1, 1, HPos.CENTER, VPos.CENTER, Priority.ALWAYS, Priority.ALWAYS);
+//        gridpane.getRowConstraints().add(new RowConstraints());
+//        gridpane.getRowConstraints().get(rowIndex).setValignment(VPos.TOP);
+//        gridpane.getRowConstraints().get(rowIndex).setVgrow(Priority.ALWAYS);
         rowIndex++;
         lv.getItems().add(child2.getText());
 
@@ -261,13 +267,13 @@ public class FXMLController implements Initializable {
                 Track<BamContext> t = trackBuilder.load(FileType.BAM, selectedFile.getText());
 
                 Genome selectedGenome = genomeSelector.getSelectionModel().getSelectedItem();
-                
+
                 // bind the span property of this track to the model
                 t.getSpan().bind(model.getSpan(selectedGenome));
-                
+
                 t.getSpan().addListener(new ChangeListener<Optional<GenomeSpan>>() {
                     public void changed(ObservableValue<? extends Optional<GenomeSpan>> observable, Optional<GenomeSpan> oldValue, Optional<GenomeSpan> newValue) {
-                        logger.info("span change detected in track "+t);
+                        logger.info("span change detected in track " + t);
                     }
                 });
 
@@ -288,6 +294,37 @@ public class FXMLController implements Initializable {
     public void initialize(URL url, ResourceBundle rb) {
         ObservableList<Genome> genomes = model.getGenomes();
         trackListView = new ListView<String>();
+
+        {
+            LineHistogramView lhv = new LineHistogramView();
+            int max = 300;
+            List<Double> collect = IntStream.range(0, max).mapToDouble(i -> Math.sin((i + 0.) / (max / 10))).boxed().collect(Collectors.toList());
+            double[] data = ArrayUtils.toPrimitive(collect.toArray(new Double[0]));
+
+            lhv.setData(data);
+            lhv.widthProperty().bind(histogram.widthProperty());
+            lhv.heightProperty().bind(histogram.heightProperty());
+            lhv.setMin(-1);
+            lhv.setMax(1);
+
+            histogram.getChildren().add(lhv.getGraphic());
+        }
+        {
+            LineHistogramView lhv = new LineHistogramView();
+            int max = 300;
+            List<Double> collect = IntStream.range(0, max).mapToDouble(i -> Math.sin((i + 0.) / (max / 10))).boxed().collect(Collectors.toList());
+            double[] data = ArrayUtils.toPrimitive(collect.toArray(new Double[0]));
+
+            lhv.setData(data);
+            lhv.widthProperty().bind(histogram2.widthProperty());
+            lhv.heightProperty().bind(histogram2.heightProperty());
+            lhv.setMin(-1);
+            lhv.setMax(1);
+            lhv.setFlipDomain(true);
+            lhv.setFlipRange(true);
+
+            histogram2.getChildren().add(lhv.getGraphic());
+        }
 
         System.out.println("genomes: " + genomes);
 
@@ -350,8 +387,7 @@ public class FXMLController implements Initializable {
         // displayed in the split pane
         genomes.addListener(new ListChangeListener<Genome>() {
 
-            class TrackCell<T> extends ListCell<Track<T>> {               
-                
+            class TrackCell<T> extends ListCell<Track<T>> {
 
                 protected void updateItem(Track<T> item, boolean empty) {
                     super.updateItem(item, empty);

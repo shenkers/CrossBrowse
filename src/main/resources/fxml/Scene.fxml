@@ -42,14 +42,9 @@
         <Pane AnchorPane.topAnchor="400" prefHeight="100" prefWidth="100"  fx:id="canvas" />
         <BorderPane AnchorPane.topAnchor="400" AnchorPane.leftAnchor="200" prefHeight="100" prefWidth="100"  fx:id="stp" />
         <ListView AnchorPane.topAnchor="500" prefHeight="200"  fx:id="lv" />
-        <GridPane AnchorPane.topAnchor="700" BorderPane.alignment="CENTER" alignment="CENTER" GridPane.valignment="CENTER" fx:id="gridpane">
-            <columnConstraints>
-                <!--                   <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
-                <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />-->
-            </columnConstraints>
-            <rowConstraints>
-                <!--<RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="true" fillHeight="true" />-->
-            </rowConstraints>
-        </GridPane>
+        <SplitPane orientation="HORIZONTAL" AnchorPane.topAnchor="700" prefHeight="200" prefWidth="800">
+            <Pane fx:id="histogram" />
+            <Pane fx:id="histogram2" />
+        </SplitPane>
     </children>
 </AnchorPane>
