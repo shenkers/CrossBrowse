@@ -9,3 +9,7 @@
 .split-pane.genome-split-pane > .split-pane-divider {  
     -fx-padding: 0 0.05em 0 0.05em;  
 } 
+
+.scroll-pane.alignment-scroll-pane > .scroll-bar {  
+    -fx-opacity: 0;  
+} 

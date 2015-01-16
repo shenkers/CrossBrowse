@@ -8,11 +8,13 @@
 <?import javafx.scene.layout.*?>
 <?import org.mskcc.shenkers.controller.*?>
 
-<AnchorPane xmlns:fx="http://javafx.com/fxml/1" id="AnchorPane" prefHeight="200" prefWidth="320" fx:controller="org.mskcc.shenkers.controller.FXMLController">
+<AnchorPane xmlns:fx="http://javafx.com/fxml/1" id="AnchorPane" prefHeight="200" prefWidth="800" fx:controller="org.mskcc.shenkers.controller.FXMLController">
     <children>
         
         <!--<fx:include fx:id="ci1" source="CoordinateInput.fxml"/>-->
-        <BorderPane prefHeight="400.0" prefWidth="600.0">
+        <!--<BorderPane prefHeight="400.0" prefWidth="600.0">-->
+        <BorderPane prefHeight="400.0" prefWidth="800.0">
+           
             <top>
                 <MenuBar>
                     <Menu text="File">
@@ -21,30 +23,23 @@
                     </Menu>
                 </MenuBar>
             </top>
-            <right>
-                <CustomContainerController text="custom_right" />
-            </right>
-            <left>
-                <Button fx:id="button2" layoutX="146" layoutY="90" onAction="#handleButtonAction2" text="Add!" />
-            </left>
+            
             <bottom>
                 <fx:include fx:id="child" source="CoordinateInput.fxml"/>
             </bottom>
+            
             <center>
                 <SplitPane fx:id="sp" orientation="VERTICAL" >
-                    <!--            <ListView fx:id="lv1" />
-                    <ListView fx:id="lv2" />
-                    <ListView fx:id="lv3" />-->
-                </SplitPane>
-                
+                    
+                </SplitPane>               
             </center>
+            
         </BorderPane>
         <Pane AnchorPane.topAnchor="400" prefHeight="100" prefWidth="100"  fx:id="canvas" />
         <BorderPane AnchorPane.topAnchor="400" AnchorPane.leftAnchor="200" prefHeight="100" prefWidth="100"  fx:id="stp" />
         <ListView AnchorPane.topAnchor="500" prefHeight="200"  fx:id="lv" />
-        <SplitPane orientation="HORIZONTAL" AnchorPane.topAnchor="700" prefHeight="200" prefWidth="800">
-            <Pane fx:id="histogram" />
-            <Pane fx:id="histogram2" />
-        </SplitPane>
+        <SplitPane fx:id="split" orientation="HORIZONTAL" AnchorPane.topAnchor="700" prefHeight="200" prefWidth="800" />
+        <CustomContainerController AnchorPane.topAnchor="400" AnchorPane.leftAnchor="300" text="custom_right" />
+        <Button AnchorPane.topAnchor="400" AnchorPane.leftAnchor="400" fx:id="button2" layoutX="146" layoutY="90" onAction="#handleButtonAction2" text="Add!" />
     </children>
 </AnchorPane>

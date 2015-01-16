@@ -139,11 +139,6 @@
             <version>1.0.3</version>
         </dependency>
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.10</version>
-        </dependency>
-        <dependency>
             <groupId>com.google.inject.extensions</groupId>
             <artifactId>guice-assistedinject</artifactId>
             <version>3.0</version>
@@ -172,6 +167,12 @@
             <groupId>org.seqdoop</groupId>
             <artifactId>htsjdk</artifactId>
             <version>1.118</version>
+        </dependency>
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <version>6.8.1</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

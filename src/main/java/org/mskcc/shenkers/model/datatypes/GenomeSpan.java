@@ -74,6 +74,10 @@ public class GenomeSpan {
     public void setNegativeStrand(boolean negativeStrand) {
         this.negativeStrand = negativeStrand;
     }
+    
+    public int getWidth(){
+        return end-start+1;
+    }
 
     @Override
     public String toString() {

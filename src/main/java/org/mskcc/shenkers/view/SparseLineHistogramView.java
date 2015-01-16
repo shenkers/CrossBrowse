@@ -7,6 +7,7 @@ package org.mskcc.shenkers.view;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -37,7 +38,7 @@ import org.fxmisc.easybind.EasyBind;
  *
  * @author sol
  */
-public class LineHistogramView {
+public class SparseLineHistogramView {
 
     private static final Logger logger = LogManager.getLogger();
 
@@ -59,7 +60,7 @@ public class LineHistogramView {
     // where the base of the histogram starts from
     NumberBinding zero;
 
-    public LineHistogramView() {
+    public SparseLineHistogramView() {
 
         minProperty = new SimpleDoubleProperty(0);
         maxProperty = new SimpleDoubleProperty(1);
@@ -100,16 +101,11 @@ public class LineHistogramView {
         graphic.getChildren().retainAll(background);
     }
 
-    public void addData(double d) {
-        n.set(n.get() + 1);
-        graphic.getChildren().add(getLine(n.getValue() - 1, zero, d));
-    }
+    public void setData(Map<Integer,Double> data, int length, Task task) {
+        n.set(length);
 
-    public void setData(double[] data, Task task) {
-        n.set(data.length);
-
-        for (int i = 0; i < data.length; i++) {
-            graphic.getChildren().add(getLine(i, zero, data[i]));
+        for (Integer i : data.keySet()) {
+            graphic.getChildren().add(getLine(i, zero, data.get(i)));
             if (task.isCancelled()) {
                 logger.info("recieved cancel");
                 break;

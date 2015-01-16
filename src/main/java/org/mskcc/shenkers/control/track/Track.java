@@ -7,12 +7,15 @@ package org.mskcc.shenkers.control.track;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.FutureTask;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.concurrent.Service;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Node;
@@ -33,6 +36,9 @@ import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 public class Track<T extends AbstractContext> {
 
     T dataContext;
+    
+    RenderStrategy<T> renderStrategy;
+            
     Property<View<T>> displayedView;
 
     List<View<T>> availableViews;
@@ -42,11 +48,11 @@ public class Track<T extends AbstractContext> {
     public Track(T context, List<View<T>> availableViews) {
         this.dataContext = context;
         this.availableViews = availableViews;
-        this.displayedView = new SimpleObjectProperty(new View<T>(){
-            
+        this.displayedView = new SimpleObjectProperty(new View<T>() {
+
             @Override
-            public Pane getContent(T context) {
-              
+            public Task<Pane> getContent(T context) {
+
                 Label label = new Label("EMPTY");
 //                  MenuItem[] items = availableViews.stream().map((View<T> t) ->{
 //                    MenuItem mi = new MenuItem(t.toString(), t.getContent(dataContext));
@@ -62,40 +68,64 @@ public class Track<T extends AbstractContext> {
 //                label.setContextMenu(menu);
                 BorderPane p = new BorderPane();
                 MonadicBinding<String> map = EasyBind.map(p.widthProperty(), v -> String.format("%.1f", v));
-                
+
                 label.textProperty().bind(map);
                 p.setCenter(label);
                 
-                return p;
+                class initialContent extends Task<Pane>{
+                        @Override
+                        protected Pane call() throws Exception {
+                            return p;
+                        }
+                    }
+
+//                Service<Pane> task = new Service<Pane>() {
+//                    
+//                    @Override
+//                    protected Task<Pane> createTask() {
+//                        return new initialContent();
+//                    }
+//
+//                };
+
+                return new initialContent();
             }
         });
         
+        renderStrategy = new RenderStrategy<>();
+        renderStrategy.setView(displayedView.getValue());
+
         span = new SimpleObjectProperty<>(Optional.empty());
         context.spanProperty().bind(span);
     }
-    
-    public void setView(View<T> v){
+
+    public void setView(View<T> v) {
+        renderStrategy.setView(v);
         displayedView.setValue(v);
     }
-    
-    public Property<View<T>> getView(){
+
+    public Property<View<T>> getView() {
         return displayedView;
     }
-    
-    public List<View<T>> getViews(){
+
+    public List<View<T>> getViews() {
         return availableViews;
     }
-    
-    public Property<Optional<GenomeSpan>> getSpan(){
+
+    public Property<Optional<GenomeSpan>> getSpan() {
         return span;
     }
-    
-    public String getName(){
+
+    public String getName() {
         return this.toString();
     }
+
+    public void update() {
+        renderStrategy.setContext(dataContext);
+        renderStrategy.restart();
+    }
     
-    public Pane getContent(){
-        Pane content = displayedView.getValue().getContent(this.dataContext);
-        return content;
+    public Service<Pane> getRenderStrategy(){
+        return renderStrategy;
     }
 }

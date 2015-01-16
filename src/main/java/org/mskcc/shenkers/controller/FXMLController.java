@@ -22,6 +22,7 @@ import javafx.beans.binding.Binding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.ListBinding;
 import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
@@ -33,6 +34,7 @@ import javafx.collections.ObservableListBase;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.VPos;
 import javafx.scene.Node;
@@ -47,12 +49,14 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.RowConstraints;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
@@ -64,10 +68,12 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.fxmisc.easybind.EasyBind;
+import org.fxmisc.easybind.monadic.MonadicBinding;
 import org.mskcc.shenkers.control.track.AbstractContext;
 import org.mskcc.shenkers.control.track.FileType;
 import org.mskcc.shenkers.control.track.TrackBuilder;
 import org.mskcc.shenkers.control.track.Track;
+import org.mskcc.shenkers.control.track.TrackCell;
 import org.mskcc.shenkers.control.track.View;
 import org.mskcc.shenkers.control.track.bam.BamContext;
 import org.mskcc.shenkers.model.ModelSingleton;
@@ -83,10 +89,13 @@ public class FXMLController implements Initializable {
     ModelSingleton model = ModelSingleton.getInstance();
 
     @FXML
-    Pane histogram;
+    SplitPane split;
 
     @FXML
-    Pane histogram2;
+    BorderPane histogram;
+
+    @FXML
+    BorderPane histogram2;
 
     @FXML
     ListView<String> lv;
@@ -303,14 +312,16 @@ public class FXMLController implements Initializable {
             List<Double> collect = IntStream.range(0, max).mapToDouble(i -> Math.sin((i + 0.) / (max / 10))).boxed().collect(Collectors.toList());
             double[] data = ArrayUtils.toPrimitive(collect.toArray(new Double[0]));
 
-            lhv.setData(data);
+            for (double d : data) {
+                lhv.addData(d);
+            }
 //            lhv.widthProperty().bind(histogram.widthProperty());
 //            lhv.heightProperty().bind(histogram.heightProperty());
             lhv.setMin(-1);
             lhv.setMax(1);
-            
 
-            histogram.getChildren().add(lhv.getGraphic());
+//            histogram.getChildren().add(lhv.getGraphic());
+            split.getItems().add(lhv.getGraphic());
         }
         {
             LineHistogramView lhv = new LineHistogramView();
@@ -318,7 +329,9 @@ public class FXMLController implements Initializable {
             List<Double> collect = IntStream.range(0, max).mapToDouble(i -> Math.sin((i + 0.) / (max / 10))).boxed().collect(Collectors.toList());
             double[] data = ArrayUtils.toPrimitive(collect.toArray(new Double[0]));
 
-            lhv.setData(data);
+            for (double d : data) {
+                lhv.addData(d);
+            }
 //            lhv.widthProperty().bind(histogram2.widthProperty());
 //            lhv.heightProperty().bind(histogram2.heightProperty());
             lhv.setMin(-1);
@@ -326,7 +339,8 @@ public class FXMLController implements Initializable {
             lhv.setFlipDomain(true);
             lhv.setFlipRange(true);
 
-            histogram2.getChildren().add(lhv.getGraphic());
+//            histogram2.getChildren().add(lhv.getGraphic());
+            split.getItems().add(lhv.getGraphic());
         }
 
         System.out.println("genomes: " + genomes);
@@ -374,7 +388,7 @@ public class FXMLController implements Initializable {
             return new BorderPane(new Label(text));
         };
 
-        Function<String, Node> f2 = (String text) -> {
+        Function<String, BorderPane> f2 = (String text) -> {
             return new BorderPane(new Label(text));
         };
 
@@ -389,43 +403,6 @@ public class FXMLController implements Initializable {
         // listen for changes in the set of genomes and update the list of nodes to be 
         // displayed in the split pane
         genomes.addListener(new ListChangeListener<Genome>() {
-
-            class TrackCell<T extends AbstractContext> extends ListCell<Track<T>> {
-
-                public TrackCell() {
-                    setPadding(new Insets(1));
-                }
-                
-                
-
-                protected void updateItem(Track<T> item, boolean empty) {
-                    super.updateItem(item, empty);
-                    
-                    if (!empty && item != null) {
-                        Pane node = item.getContent();
-                        
-                        // set the graphic for the track
-                        setGraphic(new BorderPane(node));
-
-                        // add the context menu so the track can be configured 
-                        // and the view strategy changed
-                        MenuItem[] items = item.getViews().stream().map(
-                                (View<T> v) -> {
-                                    MenuItem mi = new MenuItem(v.toString());
-                                    mi.setOnAction(
-                                            (ActionEvent event) -> {
-                                                item.setView(v);
-                                            }
-                                    );
-                                    return mi;
-                                }
-                        ).collect(Collectors.toList()).toArray(new MenuItem[0]);
-                        ContextMenu menu = new ContextMenu(items);
-                        setContextMenu(menu);
-
-                    }
-                }
-            }
 
             public void onChanged(ListChangeListener.Change<? extends Genome> c) {
 //                System.out.println(c.getAddedSubList().get(0).getId());
@@ -472,6 +449,7 @@ public class FXMLController implements Initializable {
                     trackListView.setCellFactory((ListView<Track<AbstractContext>> view) -> {
                         TrackCell<AbstractContext> cell = new TrackCell<AbstractContext>();
                         cell.setPrefHeight(100);
+                        cell.setPrefWidth(Region.USE_COMPUTED_SIZE);
                         return cell;
                     });
 
@@ -481,15 +459,52 @@ public class FXMLController implements Initializable {
                 if (genomes.size() > 0) {
                     Genome g = genomes.get(0);
                     ListView<Track<AbstractContext>> apply = createListView.apply(g);
-                    genomeSplitPaneNodes.add(apply);
+                    ScrollPane sp = new ScrollPane(apply);
+
+                    
+                    // bind the size of the content to the dimensions of the viewport of the scroll pane
+                    ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
+                    MonadicBinding<Double> viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
+                    apply.prefWidthProperty().bind(viewportWidthProperty);
+
+                    // only show the vertical scroll pane
+                    sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+                    sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
+                    genomeSplitPaneNodes.add(sp);
                 }
                 for (int i = 1; i < genomes.size(); i++) {
                     // add a track to represent the alignment between sequential genomes
-                    genomeSplitPaneNodes.add(f2.apply(f3.apply(genomes.get(i - 1)) + " aligned to " + f3.apply(genomes.get(i))));
+                    {
+                        BorderPane apply = f2.apply(f3.apply(genomes.get(i - 1)) + " aligned to " + f3.apply(genomes.get(i)));
+                        ScrollPane sp = new ScrollPane(apply);
+                        
+                        // bind the size of the content to the dimensions of the viewport of the scroll pane
+                        sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+                        sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+
+                        ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
+                        MonadicBinding<Double> viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
+                        MonadicBinding<Double> viewportHeightProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getHeight());
+                        apply.prefWidthProperty().bind(viewportWidthProperty);
+                        apply.prefHeightProperty().bind(viewportHeightProperty);
+
+//                        sp.getStyleClass().add("alignment-scroll-pane");
+                        genomeSplitPaneNodes.add(sp);
+                    }
 //                    genomeSplitPaneNodes.add(f.apply(genomes.get(i)));
                     Genome g = genomes.get(i);
                     ListView<Track<AbstractContext>> apply = createListView.apply(g);
-                    genomeSplitPaneNodes.add(apply);
+
+                    ScrollPane sp = new ScrollPane(apply);
+
+                    ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
+                    MonadicBinding<Double> viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
+                    apply.prefWidthProperty().bind(viewportWidthProperty);
+
+                    sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
+                    sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+                    genomeSplitPaneNodes.add(sp);
                 }
             }
         });
