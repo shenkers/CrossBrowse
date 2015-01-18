@@ -63,7 +63,7 @@ public class AlignmentOverlay extends Pane {
         s.xProperty().bind(widthProperty());
         s.yProperty().bind(heightProperty());
         getTransforms().add(s);
-        
+//      TODO to allow clicks to pass through  pane.setMouseTransparent(true);
         flipProperty = new SimpleBooleanProperty(false);
        
     }
