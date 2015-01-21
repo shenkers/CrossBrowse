@@ -23,6 +23,7 @@ import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
@@ -46,6 +47,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Polygon;
+import javafx.scene.shape.Polyline;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Shape;
 import javafx.scene.text.Text;
@@ -182,6 +184,76 @@ Callback<DoubleProperty, Observable[]> extractor;
 
     }
     
+    static class BoundPoly3 {
+
+        List<DoubleProperty> ypos;
+
+        Polygon p;
+        ObservableList<ObservableDoubleValue> observable;
+            // map the list to doubles
+            ObservableList<Double> points;
+            List<DoubleProperty> xpos;
+List<ObservableDoubleValue> interleaved;
+Callback<ObservableDoubleValue, Observable[]> extractor;
+DoubleProperty yScale;
+DoubleProperty xScale;
+List<ObservableDoubleValue> scaledY;
+ List<ObservableDoubleValue> scaledX;
+        public BoundPoly3(List<Double> xstart) {
+            yScale = new SimpleDoubleProperty(1);
+            xScale = new SimpleDoubleProperty(1);
+            
+            p = new Polygon();
+            xpos = xstart.stream().map(SimpleDoubleProperty::new).collect(Collectors.toList());
+//            IntStream.iterate(0, IntUnaryOperator.identity()).m;
+
+            // since each y pos is doubled, we'll only create half the properties and then mirror them
+            ypos = Stream.iterate(0, i -> i + i).limit(xstart.size()).map(i -> new SimpleDoubleProperty()).collect(Collectors.toList());
+            ypos.get(0).setValue(0);
+            ypos.get(ypos.size() - 1).setValue(1);
+            
+            scaledY = ypos.stream().map(p -> p.multiply(yScale)).collect(Collectors.toList());
+           scaledX = xpos.stream().map(p -> p.multiply(xScale)).collect(Collectors.toList());
+
+            interleaved = zip(zip(scaledX, scaledX), mirror(scaledY));
+
+            extractor
+                    = (ObservableDoubleValue param) -> new Observable[]{param};
+
+            // create an observable list that updates when any of the underlying double values
+            // are changed
+            observable = FXCollections.observableList(interleaved, extractor);
+            // map the list to doubles
+            points = EasyBind.map(observable, ObservableDoubleValue::get);
+            p.getPoints().setAll(points);
+            points.addListener(new ListChangeListener<Double>() {
+
+                @Override
+                public void onChanged(ListChangeListener.Change<? extends Double> c) {
+//                   p.getPoints().setAll(points);
+                    System.err.println("points listener detects change");
+
+                    while (c.next()) {
+                        if (c.wasUpdated()) {
+                            System.err.println("updated from " + c.getFrom() + " to " + c.getTo());
+
+                            for (int i = c.getFrom(); i < c.getTo(); i++) {
+                                p.getPoints().set(i, points.get(i));
+                            }
+                        }
+                    }
+                }
+            });
+
+//            EasyBind.listBind(p.getPoints(), points);
+        }
+
+        public Polygon getPoly() {
+            return p;
+        }
+
+    }
+    
     public void build() {
         List<Double> xpos = FXCollections.observableArrayList(.1, .2, .3);
 
@@ -207,15 +279,15 @@ Callback<DoubleProperty, Observable[]> extractor;
         System.exit(0);
     }
     
-    BoundPoly bp;
+    BoundPoly3 bp;
 
     @Override
     public void start(Stage stage) throws Exception {
 //        build();
        
-        bp = new BoundPoly(Arrays.asList(
+        bp = new BoundPoly3(Arrays.asList(
                 .1, .4, .2, .3,
-                .4, .3, .5, .2
+                .4, .2, .5, .2
         //                10.,40.,20.,30.,
         //                40.,30.,50.,20.
         ));
@@ -295,7 +367,7 @@ Callback<DoubleProperty, Observable[]> extractor;
         displayedSpans.add(new GenomeSpan("", 1, 10, true));
         AlignmentPolygon ap = new AlignmentPolygon(spans, displayedSpans, weights);
 
-        root.getChildren().add(ap.getPolygon());
+//        root.getChildren().add(ap.getPolygon());
         root.getChildren().add(bp.getPoly());
 //        root.getChildren().add(new Polygon(0.1, 0.0, 0.1, 0.1, 0.4, 0.2, 0.4, 0.3, 0.2, 0.6, 0.2, 0.7, 0.3, 0.8, 0.3, 1.0, 0.4, 1.0, 0.4, 0.8, 0.3, 0.7, 0.3, 0.6, 0.5, 0.3, 0.5, 0.2, 0.2, 0.1, 0.2, 0.0));
 //        root.getChildren().add(p);
@@ -310,10 +382,17 @@ Callback<DoubleProperty, Observable[]> extractor;
 //            }
 //        });
 //        BorderPane bor = new BorderPane();
-        HBox bor = new HBox();
+//        HBox bor = new HBox();
+        StackPane bor = new StackPane(sp,root);
+        bp.getPoly().setFill(Color.TRANSPARENT);
+        bp.getPoly().setStroke(new Color(0, 0, 0, 1));
+        bp.xScale.bind(bor.widthProperty());
+        bp.yScale.bind(bor.heightProperty());
+        
+        root.setMouseTransparent(true);
         root.setPrefWidth(300);
         sp.setPrefWidth(300);
-        bor.getChildren().addAll(root, sp);
+//        bor.getChildren().addAll(root, sp, new Polygon(0,0,200,200,100,50));
 //        bor.setLeft(root);
 //        bor.setRight(sp);
         Scene scene = new Scene(bor, 300, 300, Color.GRAY);
