@@ -7,6 +7,8 @@ package org.mskcc.shenkers.control.track;
 
 import java.util.concurrent.FutureTask;
 import java.util.stream.Collectors;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.WorkerStateEvent;
@@ -60,7 +62,7 @@ public class TrackCell<T extends AbstractContext> extends ListCell<Track<T>> {
             renderStrategy.setOnCancelled((e) -> {
                 setGraphic(new BorderPane(new Label("Cancelled")));
             });
-
+            
             renderStrategy.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
 
                 @Override

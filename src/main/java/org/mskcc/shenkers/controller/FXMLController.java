@@ -448,7 +448,6 @@ public class FXMLController implements Initializable {
 
                     trackListView.setCellFactory((ListView<Track<AbstractContext>> view) -> {
                         TrackCell<AbstractContext> cell = new TrackCell<AbstractContext>();
-                        cell.setPrefHeight(100);
                         cell.setPrefWidth(Region.USE_COMPUTED_SIZE);
                         return cell;
                     });
@@ -459,6 +458,8 @@ public class FXMLController implements Initializable {
                 if (genomes.size() > 0) {
                     Genome g = genomes.get(0);
                     ListView<Track<AbstractContext>> apply = createListView.apply(g);
+                    apply.fixedCellSizeProperty().setValue(100);
+                    
                     ScrollPane sp = new ScrollPane(apply);
 
                     
@@ -470,7 +471,8 @@ public class FXMLController implements Initializable {
                     // only show the vertical scroll pane
                     sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
                     sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-
+//             TODO       apply.setPrefHeight((apply.getItems().size()+1)*apply.fixedCellSizeProperty().getValue());
+                    
                     genomeSplitPaneNodes.add(sp);
                 }
                 for (int i = 1; i < genomes.size(); i++) {
@@ -495,7 +497,8 @@ public class FXMLController implements Initializable {
 //                    genomeSplitPaneNodes.add(f.apply(genomes.get(i)));
                     Genome g = genomes.get(i);
                     ListView<Track<AbstractContext>> apply = createListView.apply(g);
-
+  apply.fixedCellSizeProperty().setValue(100);
+                  
                     ScrollPane sp = new ScrollPane(apply);
 
                     ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();

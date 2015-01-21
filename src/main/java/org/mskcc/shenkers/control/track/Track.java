@@ -25,6 +25,8 @@ import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuItem;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Pane;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.fxmisc.easybind.EasyBind;
 import org.fxmisc.easybind.monadic.MonadicBinding;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
@@ -34,6 +36,8 @@ import org.mskcc.shenkers.model.datatypes.GenomeSpan;
  * @author sol
  */
 public class Track<T extends AbstractContext> {
+    
+    Logger logger = LogManager.getLogger();
 
     T dataContext;
     
@@ -121,6 +125,7 @@ public class Track<T extends AbstractContext> {
     }
 
     public void update() {
+        logger.info("restarting the render service");
         renderStrategy.setContext(dataContext);
         renderStrategy.restart();
     }

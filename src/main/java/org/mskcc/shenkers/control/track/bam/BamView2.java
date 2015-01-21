@@ -83,73 +83,85 @@ public class BamView2 implements View<BamContext> {
 
         @Override
         protected Pane call() throws Exception {
+            SAMRecordIterator sri=null;
+            try {
+                logger.info("calculating coverage for region {}:{}-{}", chr, start, end);
 
-            logger.info("calculating coverage for region {}:{}-{}", chr, start, end);
+                logger.info("allocating coverage map");
+                Map<Integer, Double> data = new HashMap<>();
 
-            int length = 1 + end - start;
-            logger.info("allocating coverage map");
-            Map<Integer, Double> data = new HashMap<>();
+                logger.info("acquiring semaphore for sam reader");
+                context.acquireReader();
+                logger.info("parsing sam file");
+                sri = SAMReader.query(chr, start, end, false);
 
-            logger.info("parking sam reader");
-            context.acquireReader();
-            logger.info("parsing sam file");
-            SAMRecordIterator sri = SAMReader.query(chr, start, end, false);
+                while (sri.hasNext()) {
 
-            while (sri.hasNext()) {
+                    if (isCancelled()) {
+                        logger.info(Thread.currentThread().getName() + " recieved cancel and terminating");
+                        break;
+                    }
 
-                if (isCancelled()) {
-                    logger.info("recieved cancel and terminating");
-                    break;
-                }
+                    LockSupport.parkNanos(1);
 
-                LockSupport.parkNanos(1);
-
-                SAMRecord sr = sri.next();
+                    SAMRecord sr = sri.next();
 //                            logger.info("read: " + sr);
 
-                int alignmentPosition = sr.getAlignmentStart();
+                    int alignmentPosition = sr.getAlignmentStart();
 
-                Cigar cigar = sr.getCigar();
+                    Cigar cigar = sr.getCigar();
 
-                for (int i = 0; i < cigar.numCigarElements(); i++) {
-                    CigarElement cigarElement = cigar.getCigarElement(i);
-                    if (cigarElement.getOperator().consumesReferenceBases()) {
-                        boolean consumesReadBases = cigarElement.getOperator().consumesReadBases();
-                        for (int j = 0; j < cigarElement.getLength(); j++) {
-                            if (consumesReadBases && alignmentPosition >= start && alignmentPosition <= end) {
-                                int k = alignmentPosition - start;
-                                if (!data.containsKey(k)) {
-                                    data.put(k, 0.0);
+                    for (int i = 0; i < cigar.numCigarElements(); i++) {
+                        CigarElement cigarElement = cigar.getCigarElement(i);
+                        if (cigarElement.getOperator().consumesReferenceBases()) {
+                            boolean consumesReadBases = cigarElement.getOperator().consumesReadBases();
+                            for (int j = 0; j < cigarElement.getLength(); j++) {
+                                if (consumesReadBases && alignmentPosition >= start && alignmentPosition <= end) {
+                                    int k = alignmentPosition - start;
+                                    if (!data.containsKey(k)) {
+                                        data.put(k, 0.0);
+                                    }
+                                    data.put(k, data.get(k) + 1);
+
                                 }
-                                data.put(k, data.get(k) + 1);
-
+                                alignmentPosition++;
                             }
-                            alignmentPosition++;
                         }
                     }
                 }
-            }
 
-            sri.close();
-            context.releaseReader();
-            logger.info("unparking sam reader");
+                
 
 //            double[] data = ArrayUtils.toPrimitive(IntStream.of(cov).mapToDouble(j -> j + 0.).boxed().collect(Collectors.toList()).toArray(new Double[0]));
-            
-            logger.info("setting data");
-            SparseLineHistogramView lhv = new SparseLineHistogramView();
-            lhv.setData(data, end - start + 1, this);
+                logger.info("setting data");
+                SparseLineHistogramView lhv = new SparseLineHistogramView();
+                lhv.setData(data, end - start + 1, this);
 
-            logger.info("calculating max");
-            data.values().stream().max((Double d1, Double d2)
-                    -> Double.compare(d1, d2)
-            ).ifPresent(m -> lhv.setMax(m));
+                logger.info("calculating max");
+                data.values().stream().max((Double d1, Double d2)
+                        -> Double.compare(d1, d2)
+                ).ifPresent(m -> lhv.setMax(m));
 //            IntStream.of(cov).max().ifPresent(m -> lhv.setMax(m));
 
-            logger.info("returning graphic");
+                logger.info("returning graphic");
 
-            return lhv.getGraphic();
+                return lhv.getGraphic();
+            } catch (Throwable t) {
+                logger.info("Thread {} task {} threw exception {}", Thread.currentThread().getName(), this, t.getMessage());
+                
+                throw t;
+            }
+            finally{
+                
+                if(sri!=null)
+                sri.close();
+                logger.info("{} releasing semaphore for task {}", Thread.currentThread().getName(), this);
+                context.releaseReader();
+                logger.info("released sam reader semaphore");
+            }
         }
+        
+        
 
         @Override
         protected void cancelled() {
