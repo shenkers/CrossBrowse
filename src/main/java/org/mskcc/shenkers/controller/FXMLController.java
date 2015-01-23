@@ -421,6 +421,21 @@ public class FXMLController implements Initializable {
 //                        }
 //                    });
                     ObservableList<Track<AbstractContext>> tracks = model.getTracks(g);
+
+                    tracks.addListener(new ListChangeListener<Track<AbstractContext>>() {
+
+                        @Override
+                        public void onChanged(ListChangeListener.Change<? extends Track<AbstractContext>> c) {
+                            while (c.next()) {
+                                if (c.wasAdded() || c.wasRemoved()) {
+                                    logger.info("adjusting height for trackListView {}", trackListView);
+                                    trackListView.setPrefHeight((tracks.size() * 100) + 2);
+                                }
+                            }
+                        }
+                    });
+                    trackListView.setPrefHeight(tracks.isEmpty() ? 0 : (tracks.size() * 100) + 2);
+                    
                     Callback<Track<AbstractContext>, Observable[]> extractor = new Callback<Track<AbstractContext>, Observable[]>() {
 
                         @Override
@@ -459,10 +474,9 @@ public class FXMLController implements Initializable {
                     Genome g = genomes.get(0);
                     ListView<Track<AbstractContext>> apply = createListView.apply(g);
                     apply.fixedCellSizeProperty().setValue(100);
-                    
+
                     ScrollPane sp = new ScrollPane(apply);
 
-                    
                     // bind the size of the content to the dimensions of the viewport of the scroll pane
                     ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
                     MonadicBinding<Double> viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
@@ -472,7 +486,7 @@ public class FXMLController implements Initializable {
                     sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
                     sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 //             TODO       apply.setPrefHeight((apply.getItems().size()+1)*apply.fixedCellSizeProperty().getValue());
-                    
+
                     genomeSplitPaneNodes.add(sp);
                 }
                 for (int i = 1; i < genomes.size(); i++) {
@@ -480,7 +494,7 @@ public class FXMLController implements Initializable {
                     {
                         BorderPane apply = f2.apply(f3.apply(genomes.get(i - 1)) + " aligned to " + f3.apply(genomes.get(i)));
                         ScrollPane sp = new ScrollPane(apply);
-                        
+
                         // bind the size of the content to the dimensions of the viewport of the scroll pane
                         sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
                         sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
@@ -497,8 +511,8 @@ public class FXMLController implements Initializable {
 //                    genomeSplitPaneNodes.add(f.apply(genomes.get(i)));
                     Genome g = genomes.get(i);
                     ListView<Track<AbstractContext>> apply = createListView.apply(g);
-  apply.fixedCellSizeProperty().setValue(100);
-                  
+                    apply.fixedCellSizeProperty().setValue(100);
+
                     ScrollPane sp = new ScrollPane(apply);
 
                     ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
