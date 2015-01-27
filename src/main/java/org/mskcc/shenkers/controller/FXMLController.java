@@ -12,8 +12,10 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -29,6 +31,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
@@ -47,9 +50,15 @@ import javafx.util.StringConverter;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.controlsfx.validation.ValidationResult;
+import org.controlsfx.validation.ValidationSupport;
+import org.controlsfx.validation.Validator;
+import org.controlsfx.validation.decoration.GraphicValidationDecoration;
+import org.controlsfx.validation.decoration.StyleClassValidationDecoration;
+import org.controlsfx.validation.decoration.ValidationDecoration;
 import org.fxmisc.easybind.EasyBind;
 import org.fxmisc.easybind.monadic.MonadicBinding;
-import org.mskcc.shenkers.control.alignment.AlignmentLoader;
+import org.mskcc.shenkers.control.alignment.io.AlignmentLoader;
 import org.mskcc.shenkers.control.alignment.AlignmentType;
 import org.mskcc.shenkers.control.track.AbstractContext;
 import org.mskcc.shenkers.control.track.FileType;
@@ -291,28 +300,48 @@ public class FXMLController implements Initializable {
     }
 
     @FXML
-    private void loadAlignment(ActionEvent event) {
+    private void loadChainAlignment(ActionEvent event) {
         logger.info("loading alignments");
 
         GridPane gp1 = new GridPane();
         ObservableList<Genome> genomes = model.getGenomes();
 
-        List<Pair<Genome, Genome>> genomePairs = new ArrayList<>();
-        List<Label> labels = new ArrayList<>();
+        List<ComboBox<Pair<Genome, Genome>>> genomePairs = new ArrayList<>();
         List<TextField> textFields = new ArrayList<>();
         List<Button> selectFiles = new ArrayList<>();
+
+        ValidationSupport validation = new ValidationSupport();
+
         for (int i = 0; i < genomes.size(); i++) {
             Genome g1 = genomes.get(i);
             for (int j = i + 1; j < genomes.size(); j++) {
                 Genome g2 = genomes.get(j);
 
-                genomePairs.add(new Pair<>(g1, g2));
+                ComboBox<Pair<Genome, Genome>> liftPair = new ComboBox<>();
+                liftPair.getItems().addAll(new Pair<>(g1, g2), new Pair<>(g2, g1));
+                liftPair.setConverter(
+                        new StringConverter<Pair<Genome, Genome>>() {
 
-                labels.add(new Label(String.format("chain from %s to %s", g1.getId(), g2.getId())));
+                            public String toString(Pair<Genome, Genome> object) {
+                                return String.format("%s -> %s", object.getKey().getId(), object.getValue().getId());
+                            }
+
+                            @Override
+                            public Pair<Genome, Genome> fromString(String string) {
+                                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                            }
+                        }
+                );
+
+                genomePairs.add(liftPair);
+
                 TextField selectedFile = new TextField("");
                 textFields.add(selectedFile);
                 Button button = new Button("Select");
                 selectFiles.add(button);
+
+                validation.registerValidator(liftPair, Validator.createEmptyValidator(String.format("Specify alignment direction for genomes (%s,%s)", g1.getId(), g2.getId())));
+                validation.registerValidator(selectedFile, Validator.createEmptyValidator(String.format("Specify chain for genomes (%s,%s)", g1.getId(), g2.getId())));
 
                 button.setOnAction(
                         actionEvent -> {
@@ -328,15 +357,23 @@ public class FXMLController implements Initializable {
                 );
             }
         }
-        for (int i = 0; i < labels.size(); i++) {
-            gp1.addRow(i, labels.get(i), textFields.get(i), selectFiles.get(i));
+        for (int i = 0; i < genomePairs.size(); i++) {
+            gp1.addRow(i, genomePairs.get(i), textFields.get(i), selectFiles.get(i));
         }
 
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+//        alert.getg
+//        alert.setHeight(800);
         alert.setTitle("Load alignment");
-        alert.setHeaderText("Configure pairwise alignments");
+//        alert.setHeaderText("Configure pairwise alignments");
+//        MonadicBinding<Alert.AlertType> map = EasyBind.map(validation.invalidProperty(), (isInvalid) -> {return isInvalid ? Alert.AlertType.ERROR : Alert.AlertType.NONE; });
+//        alert.alertTypeProperty().bind(map);
+
+        alert.headerTextProperty().bind(EasyBind.map(validation.invalidProperty(), invalid -> invalid ? "Complete required fields" : "Configure pairwise alignments"));
         alert.getDialogPane().setContent(gp1);
 
+//        Alert.AlertType
+        alert.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(validation.invalidProperty());
 //        ButtonType loginButtonType = new ButtonType("Create genome", ButtonData.FINISH);
 //        alert.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
 //
@@ -347,7 +384,8 @@ public class FXMLController implements Initializable {
             if (buttonType.equals(ButtonType.OK)) {
                 logger.info("preparing to load alignments");
                 List<AlignmentSource> alignmentSources = textFields.stream().map(textField -> alignmentLoader.load(AlignmentType.chain, textField.getText())).collect(Collectors.toList());
-                model.setAlignments(genomePairs, alignmentSources);
+                List<Pair<Genome, Genome>> selectedPairs = genomePairs.stream().map(comboBox -> comboBox.getSelectionModel().getSelectedItem()).collect(Collectors.toList());
+                model.setAlignments(selectedPairs, alignmentSources);
             }
             if (buttonType.equals(ButtonType.CANCEL)) {
                 logger.info("canceling loading alignments");
