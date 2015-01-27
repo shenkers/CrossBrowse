@@ -14,13 +14,14 @@ import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
+import org.mskcc.shenkers.control.alignment.config.AlignmentConfiguration;
 import org.mskcc.shenkers.control.track.config.TrackConfiguration;
 
 public class MainApp extends Application {
 
     @Override
     public void start(Stage stage) throws Exception {
-        Injector inj = Guice.createInjector(new TrackConfiguration());
+        Injector inj = Guice.createInjector(new TrackConfiguration(), new AlignmentConfiguration());
         FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/Scene.fxml"));
         loader.setControllerFactory((Class<?> type)->{return inj.getInstance(type);});
 ////        loader.setRoot(this);
