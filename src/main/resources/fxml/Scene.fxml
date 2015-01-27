@@ -20,6 +20,7 @@
                     <Menu text="File">
                         <MenuItem onAction="#loadGenome"  text="Load genome"/>
                         <MenuItem onAction="#loadTrack"  text="Load track"/>
+                        <MenuItem onAction="#loadAlignment"  text="Load alignment"/>
                     </Menu>
                 </MenuBar>
             </top>

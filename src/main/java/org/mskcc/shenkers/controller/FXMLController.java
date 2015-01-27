@@ -1,81 +1,63 @@
 package org.mskcc.shenkers.controller;
 
 import com.google.inject.Inject;
-import com.sun.javafx.binding.ContentBinding;
 import java.io.File;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import javafx.beans.Observable;
-import javafx.beans.binding.Binding;
 import javafx.beans.binding.Bindings;
-import javafx.beans.binding.ListBinding;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.Property;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
-import javafx.collections.ObservableListBase;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Bounds;
-import javafx.geometry.Insets;
-import javafx.geometry.VPos;
 import javafx.scene.Node;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
-import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
-import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
-import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
-import javafx.scene.layout.RowConstraints;
-import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import javafx.util.Pair;
 import javafx.util.StringConverter;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.fxmisc.easybind.EasyBind;
 import org.fxmisc.easybind.monadic.MonadicBinding;
+import org.mskcc.shenkers.control.alignment.AlignmentLoader;
+import org.mskcc.shenkers.control.alignment.AlignmentType;
 import org.mskcc.shenkers.control.track.AbstractContext;
 import org.mskcc.shenkers.control.track.FileType;
 import org.mskcc.shenkers.control.track.TrackBuilder;
 import org.mskcc.shenkers.control.track.Track;
 import org.mskcc.shenkers.control.track.TrackCell;
-import org.mskcc.shenkers.control.track.View;
 import org.mskcc.shenkers.control.track.bam.BamContext;
+import org.mskcc.shenkers.control.alignment.AlignmentSource;
 import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.SimpleTrack;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -103,7 +85,10 @@ public class FXMLController implements Initializable {
     int rowIndex = 0;
 
     @FXML
-    SplitPane sp;
+    SplitPane genomeSplitPane;
+
+    @FXML
+    Pane alignmentOverlay;
 
 //    @FXML
 //    ListView lv1, lv2, lv3;
@@ -115,9 +100,17 @@ public class FXMLController implements Initializable {
 
     TrackBuilder trackBuilder;
 
+    AlignmentLoader alignmentLoader;
+
+    @Inject
+    private void setAlignmentLoader(AlignmentLoader b) {
+        logger.info("injecting track builder");
+        this.alignmentLoader = b;
+    }
+
     @Inject
     private void setTrackBuilder(TrackBuilder b) {
-        System.out.println("injecting track builder");
+        logger.info("injecting track builder");
         this.trackBuilder = b;
     }
 
@@ -297,6 +290,72 @@ public class FXMLController implements Initializable {
         });
     }
 
+    @FXML
+    private void loadAlignment(ActionEvent event) {
+        logger.info("loading alignments");
+
+        GridPane gp1 = new GridPane();
+        ObservableList<Genome> genomes = model.getGenomes();
+
+        List<Pair<Genome, Genome>> genomePairs = new ArrayList<>();
+        List<Label> labels = new ArrayList<>();
+        List<TextField> textFields = new ArrayList<>();
+        List<Button> selectFiles = new ArrayList<>();
+        for (int i = 0; i < genomes.size(); i++) {
+            Genome g1 = genomes.get(i);
+            for (int j = i + 1; j < genomes.size(); j++) {
+                Genome g2 = genomes.get(j);
+
+                genomePairs.add(new Pair<>(g1, g2));
+
+                labels.add(new Label(String.format("chain from %s to %s", g1.getId(), g2.getId())));
+                TextField selectedFile = new TextField("");
+                textFields.add(selectedFile);
+                Button button = new Button("Select");
+                selectFiles.add(button);
+
+                button.setOnAction(
+                        actionEvent -> {
+                            FileChooser fc = new FileChooser();
+                            Stage s = new Stage();
+                            fc.setTitle("Select a fasta reference sequence");
+                            File selection = fc.showOpenDialog(s);
+                            if (selection != null) {
+                                logger.info("Selected alignment file: " + selection.getAbsolutePath());
+                                selectedFile.setText(selection.getAbsolutePath());
+                            }
+                        }
+                );
+            }
+        }
+        for (int i = 0; i < labels.size(); i++) {
+            gp1.addRow(i, labels.get(i), textFields.get(i), selectFiles.get(i));
+        }
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Load alignment");
+        alert.setHeaderText("Configure pairwise alignments");
+        alert.getDialogPane().setContent(gp1);
+
+//        ButtonType loginButtonType = new ButtonType("Create genome", ButtonData.FINISH);
+//        alert.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
+//
+//        ((Button)alert.getDialogPane().lookupButton(ButtonData.OK_DONE)).setText("Create genome");
+        alert.showAndWait().ifPresent(buttonType -> {
+            logger.info("{}", buttonType);
+            logger.info("{}", buttonType.getText());
+            if (buttonType.equals(ButtonType.OK)) {
+                logger.info("preparing to load alignments");
+                List<AlignmentSource> alignmentSources = textFields.stream().map(textField -> alignmentLoader.load(AlignmentType.chain, textField.getText())).collect(Collectors.toList());
+                model.setAlignments(genomePairs, alignmentSources);
+            }
+            if (buttonType.equals(ButtonType.CANCEL)) {
+                logger.info("canceling loading alignments");
+            }
+        });
+
+    }
+
     IntegerProperty x = new SimpleIntegerProperty(0);
     ObservableList<Node> genomeSplitPaneNodes;
     ListView<String> trackListView;
@@ -435,7 +494,7 @@ public class FXMLController implements Initializable {
                         }
                     });
                     trackListView.setPrefHeight(tracks.isEmpty() ? 0 : (tracks.size() * 100) + 2);
-                    
+
                     Callback<Track<AbstractContext>, Observable[]> extractor = new Callback<Track<AbstractContext>, Observable[]>() {
 
                         @Override
@@ -534,9 +593,9 @@ public class FXMLController implements Initializable {
             }
         });
 
-        sp.getStyleClass().add("genome-split-pane");
+        genomeSplitPane.getStyleClass().add("genome-split-pane");
 //        sp.getItems().addListener((ListChangeListener.Change<? extends Node> e)->{System.out.println("changed view");});
-        Bindings.bindContentBidirectional(sp.getItems(), genomeSplitPaneNodes);
+        Bindings.bindContentBidirectional(genomeSplitPane.getItems(), genomeSplitPaneNodes);
 
 //        ObservableList<Integer> oal = FXCollections.observableArrayList(1,2,3);
 //        

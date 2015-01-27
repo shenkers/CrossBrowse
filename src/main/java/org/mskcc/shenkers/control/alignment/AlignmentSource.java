@@ -3,7 +3,9 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.mskcc.shenkers.imodel;
+package org.mskcc.shenkers.control.alignment;
+
+import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
 /**
  *
@@ -11,4 +13,5 @@ package org.mskcc.shenkers.imodel;
  */
 public interface AlignmentSource {
     
+    public String[] getAlignment(GenomeSpan span1, GenomeSpan span2);
 }
