@@ -37,6 +37,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 /**
  * Holds a single chain from a UCSC chain file.  Chain file format is described here: http://genome.ucsc.edu/goldenPath/help/chain.html
@@ -61,6 +63,9 @@ import java.util.regex.Pattern;
  * @author alecw@broadinstitute.org
  */
 class Chain {
+    
+    final static Logger logger = LogManager.getLogger();
+    
     // For parsing chain file
     private static final Pattern SPLITTER = Pattern.compile("\\s");
 
@@ -340,6 +345,14 @@ class Chain {
         if (line == null) {
             return null;
         }
+        
+        // skip the header
+        while(line.matches("^#.*")){
+            logger.info("skipping '{}'", line);
+            line = reader.readLine();
+        }
+        logger.info("{}", line);
+        
         String[] chainFields = SPLITTER.split(line);
         if (chainFields.length != 13) {
             throwChainFileParseException("chain line has wrong number of fields", chainFile, reader.getLineNumber());

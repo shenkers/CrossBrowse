@@ -13,5 +13,5 @@ import org.mskcc.shenkers.control.alignment.AlignmentType;
  * @author sol
  */
 public interface AlignmentLoader {
-    public AlignmentSource load(AlignmentType type, String uri);
+    public AlignmentSource load(String uri);
 }

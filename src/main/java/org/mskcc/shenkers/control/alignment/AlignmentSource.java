@@ -5,6 +5,7 @@
  */
 package org.mskcc.shenkers.control.alignment;
 
+import java.util.List;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
 /**
@@ -13,5 +14,5 @@ import org.mskcc.shenkers.model.datatypes.GenomeSpan;
  */
 public interface AlignmentSource {
     
-    public String[] getAlignment(GenomeSpan span1, GenomeSpan span2);
+    public List<LocalAlignment> getAlignment(GenomeSpan span1, GenomeSpan span2);
 }

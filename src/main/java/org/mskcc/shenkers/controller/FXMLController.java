@@ -383,7 +383,7 @@ public class FXMLController implements Initializable {
             logger.info("{}", buttonType.getText());
             if (buttonType.equals(ButtonType.OK)) {
                 logger.info("preparing to load alignments");
-                List<AlignmentSource> alignmentSources = textFields.stream().map(textField -> alignmentLoader.load(AlignmentType.chain, textField.getText())).collect(Collectors.toList());
+                List<AlignmentSource> alignmentSources = textFields.stream().map(textField -> alignmentLoader.load(textField.getText())).collect(Collectors.toList());
                 List<Pair<Genome, Genome>> selectedPairs = genomePairs.stream().map(comboBox -> comboBox.getSelectionModel().getSelectedItem()).collect(Collectors.toList());
                 model.setAlignments(selectedPairs, alignmentSources);
             }

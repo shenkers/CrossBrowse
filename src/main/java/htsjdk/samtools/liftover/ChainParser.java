@@ -23,6 +23,7 @@
  */
 package htsjdk.samtools.liftover;
 
+import org.mskcc.shenkers.control.alignment.LocalAlignment;
 import com.sun.javafx.scene.control.skin.VirtualFlow;
 import htsjdk.samtools.SAMException;
 import htsjdk.samtools.SAMSequenceDictionary;
@@ -75,17 +76,17 @@ public class ChainParser {
      * @return Interval in the output build coordinates, or null if it cannot be
      * lifted over.
      */
-    public List<AlignedBlocks> getChainIntersections(final Interval interval) {
+    public List<LocalAlignment> getChainIntersections(final Interval interval) {
         if (interval.length() == 0) {
             throw new IllegalArgumentException("Zero-length interval cannot be lifted over.  Interval: "
                     + interval.getName());
         }
 
-        List<AlignedBlocks> hits = new ArrayList<>();
+        List<LocalAlignment> hits = new ArrayList<>();
 
         // Find the appropriate Chain, and the part of the chain corresponding to the interval to be lifted over.
         for (final Chain chain : chains.getOverlaps(interval)) {
-             hits.add(getAlignedBlocks(chain, interval));
+            hits.add(getAlignedBlocks(chain, interval));
         }
 
         return hits;
@@ -97,7 +98,7 @@ public class ChainParser {
      * @return Length of overlap, offsets into first and last ContinuousBlocks,
      * and indices of first and last ContinuousBlocks.
      */
-    private static AlignedBlocks getAlignedBlocks(final Chain chain, final Interval interval) {
+    private static LocalAlignment getAlignedBlocks(final Chain chain, final Interval interval) {
         // Convert interval to 0-based, half-open
         int start = interval.getStart() - 1;
         int end = interval.getEnd();
@@ -117,19 +118,13 @@ public class ChainParser {
             int fromStart = start > block.fromStart ? start : block.fromStart;
             int fromEnd = block.getFromEnd() > end ? end : block.getFromEnd();
 
-            Integer startOffset = null;
-            if (start > block.fromStart) {
-                startOffset = start - block.fromStart;
-            } else {
-                startOffset = 0;
-            }
+            Integer startOffset = (start > block.fromStart)
+                    ? start - block.fromStart
+                    : 0;
 
-            Integer offsetFromEnd = null;
-            if (block.getFromEnd() > end) {
-                offsetFromEnd = block.getFromEnd() - end;
-            } else {
-                offsetFromEnd = 0;
-            }
+            int offsetFromEnd = (block.getFromEnd() > end)
+                    ? block.getFromEnd() - end
+                    : 0;
 
             int toStart = chain.toNegativeStrand
                     ? chain.toSequenceSize - (chain.getBlock(i).getToEnd() - offsetFromEnd)
@@ -137,13 +132,14 @@ public class ChainParser {
             int toEnd = chain.toNegativeStrand
                     ? chain.toSequenceSize - (chain.getBlock(i).toStart + startOffset)
                     : chain.getBlock(i).getToEnd() - offsetFromEnd;
-        
-            fromBlocks.add(new Pair<>(fromStart, fromEnd));
-            toBlocks.add(new Pair<>(toStart, toEnd));
-            
+
+            // convert from 0 to 1 based interval start
+            fromBlocks.add(new Pair<>(fromStart + 1, fromEnd));
+            toBlocks.add(new Pair<>(toStart + 1, toEnd));
+
         }
 
-        return new AlignedBlocks(chain.fromSequenceName, chain.toSequenceName, chain.toNegativeStrand, fromBlocks, toBlocks);
+        return new LocalAlignment(chain.fromSequenceName, chain.toSequenceName, chain.toNegativeStrand, fromBlocks, toBlocks);
     }
 
     /**
