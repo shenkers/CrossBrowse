@@ -18,10 +18,12 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.util.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mskcc.shenkers.control.track.AbstractContext;
 import org.mskcc.shenkers.control.track.Track;
+import org.mskcc.shenkers.control.alignment.AlignmentSource;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
 /**
@@ -39,6 +41,7 @@ public class ModelSingleton {
         tracks = FXCollections.observableHashMap();
         nTracks = 0;
         spans = FXCollections.observableHashMap();
+        alignments = FXCollections.observableHashMap();
     }
 
     public static synchronized ModelSingleton getInstance() {
@@ -52,11 +55,18 @@ public class ModelSingleton {
     ObservableList<Genome> genomes;
     Map<Genome, ObservableList<Track<AbstractContext>>> tracks;
     Map<Genome, Property<Optional<GenomeSpan>>> spans;
+    Map<Pair<Genome,Genome>,AlignmentSource> alignments;
 
     private int nTracks;
 
     public ObservableValue<Optional<GenomeSpan>> getSpan(Genome g) {
         return spans.get(g);
+    }
+    
+    public void setAlignments(List<Pair<Genome,Genome>> genomePairs, List<AlignmentSource> alignmentSources){
+        for(int i=0; i<genomePairs.size(); i++){
+            alignments.put(genomePairs.get(i), alignmentSources.get(i));
+        }
     }
 
     public void setSpan(Genome g, Optional<GenomeSpan> span) {
