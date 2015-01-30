@@ -119,6 +119,10 @@ public class AlignmentViewNGTest extends Application {
                     bp.ypos.get(k + 1).bind(sp.getDividers().get(k).positionProperty());
                 }
 
+                bp.flips.get(0).set(true);
+                bp.flips.get(bp.flips.size()-1).set(true);
+//                bp.flips.get(1).set(true);
+//                bp.flips.get(2).set(true);
                 bp.getPoly().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
                 bp.getPoly().setStroke(new Color(0, 0, 0, 1));
                 bp.xScale.bind(bor.widthProperty());

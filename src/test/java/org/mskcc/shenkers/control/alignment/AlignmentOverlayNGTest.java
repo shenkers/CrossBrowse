@@ -24,7 +24,11 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.DoubleBinding;
+import javafx.beans.binding.NumberBinding;
+import javafx.beans.binding.When;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableDoubleValue;
@@ -58,6 +62,7 @@ import javafx.util.Callback;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.fxmisc.easybind.EasyBind;
+import org.fxmisc.easybind.monadic.MonadicBinding;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import static org.testng.Assert.*;
 
@@ -101,11 +106,12 @@ public class AlignmentOverlayNGTest extends Application {
 
         Polygon p;
         ObservableList<DoubleProperty> observable;
-            // map the list to doubles
-            ObservableList<Double> points;
-            List<DoubleProperty> xpos;
-List<DoubleProperty> interleaved;
-Callback<DoubleProperty, Observable[]> extractor;
+        // map the list to doubles
+        ObservableList<Double> points;
+        List<DoubleProperty> xpos;
+        List<DoubleProperty> interleaved;
+        Callback<DoubleProperty, Observable[]> extractor;
+
         public BoundPoly(List<Double> xstart) {
             p = new Polygon();
             xpos = xstart.stream().map(SimpleDoubleProperty::new).collect(Collectors.toList());
@@ -161,7 +167,7 @@ Callback<DoubleProperty, Observable[]> extractor;
         ObservableList<Double> ypos;
 
         Polygon p;
-        
+
         public BoundPoly2(List<Double> xstart) {
             p = new Polygon();
             xpos = FXCollections.observableArrayList(xstart);
@@ -183,37 +189,48 @@ Callback<DoubleProperty, Observable[]> extractor;
         }
 
     }
-    
+
     static class BoundPoly3 {
 
         List<DoubleProperty> ypos;
 
         Polygon p;
         ObservableList<ObservableDoubleValue> observable;
-            // map the list to doubles
-            ObservableList<Double> points;
-            List<DoubleProperty> xpos;
-List<ObservableDoubleValue> interleaved;
-Callback<ObservableDoubleValue, Observable[]> extractor;
-DoubleProperty yScale;
-DoubleProperty xScale;
-List<ObservableDoubleValue> scaledY;
- List<ObservableDoubleValue> scaledX;
+        // map the list to doubles
+        ObservableList<Double> points;
+        List<DoubleProperty> xpos;
+        List<BooleanProperty> flips;
+        List<ObservableDoubleValue> interleaved;
+        Callback<ObservableDoubleValue, Observable[]> extractor;
+        DoubleProperty yScale;
+        DoubleProperty xScale;
+        List<ObservableDoubleValue> scaledY;
+        List<ObservableDoubleValue> scaledX;
+        List<DoubleProperty> xFlipped;
+
         public BoundPoly3(List<Double> xstart) {
             yScale = new SimpleDoubleProperty(1);
             xScale = new SimpleDoubleProperty(1);
-            
+
             p = new Polygon();
             xpos = xstart.stream().map(SimpleDoubleProperty::new).collect(Collectors.toList());
-//            IntStream.iterate(0, IntUnaryOperator.identity()).m;
+            flips = xstart.stream().map(i -> false).map(SimpleBooleanProperty::new).collect(Collectors.toList());
 
+//            IntStream.iterate(0, IntUnaryOperator.identity()).m;
             // since each y pos is doubled, we'll only create half the properties and then mirror them
-            ypos = Stream.iterate(0, i -> i + i).limit(xstart.size()).map(i -> new SimpleDoubleProperty()).collect(Collectors.toList());
+            ypos = Stream.iterate(0, i -> i + 1).limit(xstart.size()).map(i -> new SimpleDoubleProperty()).collect(Collectors.toList());
             ypos.get(0).setValue(0);
             ypos.get(ypos.size() - 1).setValue(1);
+            new SimpleDoubleProperty(0).bind(yScale);
+            xFlipped = Stream.iterate(0, i -> i + 1).limit(xstart.size()).map(j -> {
+                SimpleDoubleProperty sdp = new SimpleDoubleProperty();
+                sdp.bind(new When(flips.get(j)).then(xpos.get(j).negate().add(1.)).otherwise(xpos.get(j)));
+                return sdp;
+            }
+            ).collect(Collectors.toList());
             
             scaledY = ypos.stream().map(p -> p.multiply(yScale)).collect(Collectors.toList());
-           scaledX = xpos.stream().map(p -> p.multiply(xScale)).collect(Collectors.toList());
+            scaledX = xFlipped.stream().map(p -> p.multiply(xScale)).collect(Collectors.toList());
 
             interleaved = zip(zip(scaledX, scaledX), mirror(scaledY));
 
@@ -253,7 +270,7 @@ List<ObservableDoubleValue> scaledY;
         }
 
     }
-    
+
     public void build() {
         List<Double> xpos = FXCollections.observableArrayList(.1, .2, .3);
 
@@ -278,13 +295,13 @@ List<ObservableDoubleValue> scaledY;
         System.err.println(zip(doubled, mirror(ypos)));
         System.exit(0);
     }
-    
+
     BoundPoly3 bp;
 
     @Override
     public void start(Stage stage) throws Exception {
 //        build();
-       
+
         bp = new BoundPoly3(Arrays.asList(
                 .1, .4, .2, .3,
                 .4, .2, .5, .2
@@ -316,7 +333,6 @@ List<ObservableDoubleValue> scaledY;
 
 //        ObservableList<DoubleProperty> map = EasyBind.map(sp.getDividers(), SplitPane.Divider::positionProperty);
         ObservableList<SplitPane.Divider> dividers = sp.getDividers();
-     
 
 //        sp.getDividers().get(0).positionProperty().addListener(new ChangeListener<Number>() {
 //
@@ -331,18 +347,18 @@ List<ObservableDoubleValue> scaledY;
 //                
 //            }
 //        });
-        List<DoubleProperty> collect = sp.getDividers().stream().map(d->d.positionProperty()).collect(Collectors.toList());
+        List<DoubleProperty> collect = sp.getDividers().stream().map(d -> d.positionProperty()).collect(Collectors.toList());
         ObservableList<DoubleProperty> oc = FXCollections.observableList(collect, new Callback<DoubleProperty, Observable[]>() {
-            
+
             @Override
             public Observable[] call(DoubleProperty param) {
                 return new Observable[]{param};
             }
         });
-        
+
 //        Bindings.bindContent(bp.ypos.subList(1, 7), oc);
-        for(int i=0; i<6; i++){
-             bp.ypos.get(i+1).bind(sp.getDividers().get(i).positionProperty());
+        for (int i = 0; i < 6; i++) {
+            bp.ypos.get(i + 1).bind(sp.getDividers().get(i).positionProperty());
         }
 //        bp.ypos.get(1).bind(sp.getDividers().get(0).positionProperty());
 //        bp.ypos.get(2).bind(sp.getDividers().get(1).positionProperty());
@@ -383,12 +399,12 @@ List<ObservableDoubleValue> scaledY;
 //        });
 //        BorderPane bor = new BorderPane();
 //        HBox bor = new HBox();
-        StackPane bor = new StackPane(sp,root);
+        StackPane bor = new StackPane(sp, root);
         bp.getPoly().setFill(Color.TRANSPARENT);
         bp.getPoly().setStroke(new Color(0, 0, 0, 1));
         bp.xScale.bind(bor.widthProperty());
         bp.yScale.bind(bor.heightProperty());
-        
+
         root.setMouseTransparent(true);
         root.setPrefWidth(300);
         sp.setPrefWidth(300);
