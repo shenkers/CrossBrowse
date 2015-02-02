@@ -38,9 +38,14 @@ public class LocalAlignment {
         this.toNegativeStrand = toNegativeStrand;
         this.fromBlocks = fromBlocks;
         this.toBlocks = toBlocks;
+        
+
 
         blockSizes = fromBlocks.stream().map(pair -> pair.getValue() - pair.getKey() + 1).collect(Collectors.toList());
-
+        
+        assert fromBlocks.size() == toBlocks.size() : "Expect lists of aligned blocks to have the same length";
+        assert blockSizes.equals(toBlocks.stream().map(pair -> pair.getValue() - pair.getKey() + 1).collect(Collectors.toList())) : "Expect query/target block lists to contains blocks with equal sizes";
+        
         fromStart = fromBlocks.get(0).getKey();
         fromEnd = fromBlocks.get(fromBlocks.size() - 1).getValue();
         toStart = toNegativeStrand ? toBlocks.get(fromBlocks.size() - 1).getKey() : toBlocks.get(0).getKey();
