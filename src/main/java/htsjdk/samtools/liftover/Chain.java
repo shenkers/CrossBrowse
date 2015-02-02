@@ -351,7 +351,7 @@ class Chain {
             logger.info("skipping '{}'", line);
             line = reader.readLine();
         }
-        logger.info("{}", line);
+//        logger.info("{}", line);
         
         String[] chainFields = SPLITTER.split(line);
         if (chainFields.length != 13) {

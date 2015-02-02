@@ -34,6 +34,7 @@ import htsjdk.samtools.util.OverlapDetector;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import javafx.util.Pair;
 
 /**
@@ -86,7 +87,7 @@ public class ChainParser {
 
         // Find the appropriate Chain, and the part of the chain corresponding to the interval to be lifted over.
         for (final Chain chain : chains.getOverlaps(interval)) {
-            hits.add(getAlignedBlocks(chain, interval));
+            getAlignedBlocks(chain, interval).ifPresent(alignment -> hits.add(alignment));
         }
 
         return hits;
@@ -98,7 +99,7 @@ public class ChainParser {
      * @return Length of overlap, offsets into first and last ContinuousBlocks,
      * and indices of first and last ContinuousBlocks.
      */
-    private static LocalAlignment getAlignedBlocks(final Chain chain, final Interval interval) {
+    private static Optional<LocalAlignment> getAlignedBlocks(final Chain chain, final Interval interval) {
         // Convert interval to 0-based, half-open
         int start = interval.getStart() - 1;
         int end = interval.getEnd();
@@ -107,6 +108,9 @@ public class ChainParser {
 
         List<Pair<Integer, Integer>> fromBlocks = new ArrayList<>();
         List<Pair<Integer, Integer>> toBlocks = new ArrayList<>();
+        
+        boolean hasIntersection = false;
+        
         for (int i = 0; i < blockList.size(); ++i) {
             final Chain.ContinuousBlock block = blockList.get(i);
             if (block.fromStart >= end) {
@@ -114,6 +118,8 @@ public class ChainParser {
             } else if (block.getFromEnd() <= start) {
                 continue;
             }
+            
+            hasIntersection = true;
 
             int fromStart = start > block.fromStart ? start : block.fromStart;
             int fromEnd = block.getFromEnd() > end ? end : block.getFromEnd();
@@ -138,8 +144,13 @@ public class ChainParser {
             toBlocks.add(new Pair<>(toStart + 1, toEnd));
 
         }
+        
+        Optional<LocalAlignment> alignment = 
+                hasIntersection ? 
+                Optional.of(new LocalAlignment(chain.fromSequenceName, chain.toSequenceName, chain.toNegativeStrand, fromBlocks, toBlocks)):
+                Optional.empty();
 
-        return new LocalAlignment(chain.fromSequenceName, chain.toSequenceName, chain.toNegativeStrand, fromBlocks, toBlocks);
+        return alignment;
     }
 
     /**
