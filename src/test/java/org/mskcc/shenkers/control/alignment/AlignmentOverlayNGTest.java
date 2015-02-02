@@ -50,6 +50,11 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.CubicCurveTo;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.MoveTo;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
 import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Polyline;
 import javafx.scene.shape.Rectangle;
@@ -59,6 +64,7 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import javafx.util.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.fxmisc.easybind.EasyBind;
@@ -228,7 +234,7 @@ public class AlignmentOverlayNGTest extends Application {
                 return sdp;
             }
             ).collect(Collectors.toList());
-            
+
             scaledY = ypos.stream().map(p -> p.multiply(yScale)).collect(Collectors.toList());
             scaledX = xFlipped.stream().map(p -> p.multiply(xScale)).collect(Collectors.toList());
 
@@ -271,6 +277,201 @@ public class AlignmentOverlayNGTest extends Application {
 
     }
 
+    static Logger logger = LogManager.getLogger();
+
+    static class BoundPoly4 {
+
+        Path p;
+
+        DoubleProperty yScale;
+        DoubleProperty xScale;
+
+        List<Pair<DoubleProperty, DoubleProperty>> relativeXCoords;
+        List<Pair<DoubleProperty, DoubleProperty>> relativeYCoords;
+
+        List<Pair<DoubleBinding, DoubleBinding>> componentXCoords;
+        List<Pair<DoubleBinding, DoubleBinding>> componentYCoords;
+
+        List<DoubleProperty> genomeFlipped;
+
+        List<PathElement> pathElements;
+
+        enum PathCase {
+
+            first, middle, l_even, l_odd, r_even, r_odd, last;
+
+        };
+
+        public BoundPoly4(int nGenomes) {
+
+                        yScale = new SimpleDoubleProperty(1);
+            xScale = new SimpleDoubleProperty(1);
+
+            
+            relativeXCoords = new ArrayList<>();
+            relativeYCoords = new ArrayList<>();
+            componentXCoords = new ArrayList<>();
+            componentYCoords = new ArrayList<>();
+
+            for (int i = 0; i < nGenomes; i++) {
+                relativeXCoords.add(new Pair<>(new SimpleDoubleProperty(), new SimpleDoubleProperty()));
+                relativeYCoords.add(new Pair<>(new SimpleDoubleProperty(), new SimpleDoubleProperty()));
+                componentXCoords.add(new Pair<>(relativeXCoords.get(i).getKey().multiply(xScale), relativeXCoords.get(i).getValue().multiply(xScale)));
+                componentYCoords.add(new Pair<>(relativeYCoords.get(i).getKey().multiply(yScale), relativeYCoords.get(i).getValue().multiply(yScale)));
+            }
+
+
+            pathElements = new ArrayList<>();
+
+//            pathElements.add(new MoveTo());
+            for (int i = 0; i < nGenomes * 4; i++) {
+                Function<Integer, PathCase> f = (j -> {
+                    if (j == 0) {
+                        return PathCase.first;
+                    } else if (j + 1 == nGenomes * 4) {
+                        return PathCase.last;
+                    } else if (j + 1 == nGenomes * 2) {
+                        return PathCase.middle;
+                    } else if (j % 2 == 1) {
+                        if (j < nGenomes * 2) {
+                            return PathCase.l_odd;
+                        } else {
+                            return PathCase.r_odd;
+                        }
+                    } else {
+                        if (j < nGenomes * 2) {
+                            return PathCase.l_even;
+                        } else {
+                            return PathCase.r_even;
+                        }
+                    }
+                });
+
+                logger.info("i {}", i);
+
+                // get the index of the genome
+                int g = i < nGenomes * 2 ? i / 2 : ((4 * nGenomes - i - 1) / 2);
+                logger.info("g {}", g);
+
+                Pair<DoubleBinding, DoubleBinding> xCoord = componentXCoords.get(g);
+                Pair<DoubleBinding, DoubleBinding> yCoord = componentYCoords.get(g);
+
+                PathCase pc = f.apply(i);
+                switch (pc) {
+                    case first: {
+                        MoveTo moveTo = new MoveTo();
+                        LineTo lineTo = new LineTo();
+
+                        moveTo.xProperty().bind(xCoord.getKey());
+                        moveTo.yProperty().bind(yCoord.getKey());
+
+                        lineTo.xProperty().bind(xCoord.getKey());
+                        lineTo.yProperty().bind(yCoord.getValue());
+
+                        pathElements.add(moveTo);
+                        pathElements.add(lineTo);
+                        break;
+                    }
+                    case middle: {
+                        LineTo lineTo = new LineTo();
+                        lineTo.xProperty().bind(xCoord.getValue());
+                        lineTo.yProperty().bind(yCoord.getValue());
+                        pathElements.add(lineTo);
+                        break;
+                    }
+                    case last: {
+                        LineTo lineTo = new LineTo();
+                        lineTo.xProperty().bind(xCoord.getKey());
+                        lineTo.yProperty().bind(yCoord.getKey());
+                        pathElements.add(lineTo);
+                        break;
+                    }
+                    case l_odd: {
+                        CubicCurveTo curveTo = new CubicCurveTo();
+
+                        Pair<DoubleBinding, DoubleBinding> xCoordNext = componentXCoords.get(g + 1);
+                        Pair<DoubleBinding, DoubleBinding> yCoordNext = componentYCoords.get(g + 1);
+
+                        DoubleBinding controlY = yCoord.getValue().add(yCoordNext.getKey()).divide(2.);
+
+                        curveTo.controlX1Property().bind(xCoord.getKey());
+                        curveTo.controlY1Property().bind(controlY);
+
+                        curveTo.controlX2Property().bind(xCoordNext.getKey());
+                        curveTo.controlY2Property().bind(controlY);
+
+                        curveTo.xProperty().bind(xCoordNext.getKey());
+                        curveTo.yProperty().bind(yCoordNext.getKey());
+
+                        pathElements.add(curveTo);
+                        break;
+                    }
+                    case l_even: {
+                        LineTo lineTo = new LineTo();
+                        lineTo.xProperty().bind(xCoord.getKey());
+                        lineTo.yProperty().bind(yCoord.getValue());
+                        pathElements.add(lineTo);
+                        break;
+                    }
+                    case r_odd: {
+                        CubicCurveTo curveTo = new CubicCurveTo();
+
+                        Pair<DoubleBinding, DoubleBinding> xCoordNext = componentXCoords.get(g - 1);
+                        Pair<DoubleBinding, DoubleBinding> yCoordNext = componentYCoords.get(g - 1);
+
+                        DoubleBinding controlY = yCoord.getKey().add(yCoordNext.getValue()).divide(2.);
+
+                        curveTo.controlX1Property().bind(xCoord.getValue());
+                        curveTo.controlY1Property().bind(controlY);
+
+                        curveTo.controlX2Property().bind(xCoordNext.getValue());
+                        curveTo.controlY2Property().bind(controlY);
+
+                        curveTo.xProperty().bind(xCoordNext.getValue());
+                        curveTo.yProperty().bind(yCoordNext.getValue());
+
+                        pathElements.add(curveTo);
+                        break;
+                    }
+                    case r_even: {
+                        LineTo lineTo = new LineTo();
+                        lineTo.xProperty().bind(xCoord.getValue());
+                        lineTo.yProperty().bind(yCoord.getKey());
+                        pathElements.add(lineTo);
+                        break;
+                    }
+                    default: {
+                        throw new RuntimeException("should not get here");
+                    }
+                }
+            }
+
+            p = new Path(pathElements);
+
+        }
+
+        class ScaledLine extends DoubleBinding {
+
+            DoubleProperty xScale;
+            DoubleProperty yScale;
+
+            // relativeCoordinates
+            DoubleProperty x;
+            DoubleProperty y;
+
+            @Override
+            protected double computeValue() {
+                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            }
+
+        }
+
+        public Path getPath() {
+            return p;
+        }
+
+    }
+
     public void build() {
         List<Double> xpos = FXCollections.observableArrayList(.1, .2, .3);
 
@@ -297,6 +498,9 @@ public class AlignmentOverlayNGTest extends Application {
     }
 
     BoundPoly3 bp;
+    BoundPoly4 bp4;
+    ObservableList<SplitPane.Divider> dividers;
+    DoubleProperty pp;
 
     @Override
     public void start(Stage stage) throws Exception {
@@ -332,7 +536,7 @@ public class AlignmentOverlayNGTest extends Application {
         );
 
 //        ObservableList<DoubleProperty> map = EasyBind.map(sp.getDividers(), SplitPane.Divider::positionProperty);
-        ObservableList<SplitPane.Divider> dividers = sp.getDividers();
+        dividers = sp.getDividers();
 
 //        sp.getDividers().get(0).positionProperty().addListener(new ChangeListener<Number>() {
 //
@@ -384,7 +588,32 @@ public class AlignmentOverlayNGTest extends Application {
         AlignmentPolygon ap = new AlignmentPolygon(spans, displayedSpans, weights);
 
 //        root.getChildren().add(ap.getPolygon());
-        root.getChildren().add(bp.getPoly());
+        bp4 = new BoundPoly4(4);
+
+        final int w = 1;
+        bp4.relativeXCoords.get(0).getKey().setValue(0.05 * w);
+        bp4.relativeXCoords.get(0).getValue().setValue(0.15 * w);
+        bp4.relativeXCoords.get(1).getKey().setValue(0.25 * w);
+        bp4.relativeXCoords.get(1).getValue().setValue(0.4 * w);
+        bp4.relativeXCoords.get(2).getKey().setValue(0.8 * w);
+        bp4.relativeXCoords.get(2).getValue().setValue(0.85 * w);
+        bp4.relativeXCoords.get(3).getKey().setValue(0.6 * w);
+        bp4.relativeXCoords.get(3).getValue().setValue(0.75 * w);
+
+        bp4.relativeYCoords.get(0).getKey().setValue(0.0 * w);
+        bp4.relativeYCoords.get(0).getValue().bind(dividers.get(0).positionProperty().multiply(w));
+        bp4.relativeYCoords.get(1).getKey().bind(dividers.get(1).positionProperty().multiply(w));
+        bp4.relativeYCoords.get(1).getValue().bind(dividers.get(2).positionProperty().multiply(w));
+        bp4.relativeYCoords.get(2).getKey().bind(dividers.get(3).positionProperty().multiply(w));
+        bp4.relativeYCoords.get(2).getValue().bind(dividers.get(4).positionProperty().multiply(w));
+        bp4.relativeYCoords.get(3).getKey().bind(dividers.get(5).positionProperty().multiply(w));
+        bp4.relativeYCoords.get(3).getValue().setValue(1.0 * w);
+        
+        
+        logger.info("elements {}", bp4.pathElements);
+
+//        root.getChildren().add(bp.getPoly());
+        root.getChildren().add(bp4.getPath());
 //        root.getChildren().add(new Polygon(0.1, 0.0, 0.1, 0.1, 0.4, 0.2, 0.4, 0.3, 0.2, 0.6, 0.2, 0.7, 0.3, 0.8, 0.3, 1.0, 0.4, 1.0, 0.4, 0.8, 0.3, 0.7, 0.3, 0.6, 0.5, 0.3, 0.5, 0.2, 0.2, 0.1, 0.2, 0.0));
 //        root.getChildren().add(p);
 //        root.widthProperty().addListener(new ChangeListener<Number>() {
@@ -404,6 +633,9 @@ public class AlignmentOverlayNGTest extends Application {
         bp.getPoly().setStroke(new Color(0, 0, 0, 1));
         bp.xScale.bind(bor.widthProperty());
         bp.yScale.bind(bor.heightProperty());
+        bp4.xScale.bind(bor.widthProperty());
+        bp4.yScale.bind(bor.heightProperty());
+
 
         root.setMouseTransparent(true);
         root.setPrefWidth(300);

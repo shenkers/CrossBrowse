@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
+import javafx.beans.property.DoubleProperty;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
@@ -18,7 +19,9 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.Pair;
 import org.mskcc.shenkers.control.alignment.AlignmentOverlayNGTest.BoundPoly3;
+import org.mskcc.shenkers.control.alignment.AlignmentOverlayNGTest.BoundPoly4;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
@@ -57,7 +60,7 @@ public class AlignmentViewNGTest extends Application {
 
     AlignmentOverlay root;
 
-    List<BoundPoly3> l = new ArrayList<>();
+    List l = new ArrayList<>();
 
     @Override
     public void start(Stage stage) throws Exception {
@@ -101,35 +104,60 @@ public class AlignmentViewNGTest extends Application {
 
             if ((i + 1) % b == 0) {
 
+                BoundPoly4 bp4 = new AlignmentOverlayNGTest.BoundPoly4(3);
                 List<Double> xCoords = new ArrayList<>();
                 for (int j = 0; j < numRows; j++) {
 //                    System.out.println(Arrays.asList(startIndex[j], endIndex[j]));
                     System.out.println(Arrays.asList(startIndex[j] * 1. / nBasesPerRow[j], endIndex[j] * 1. / nBasesPerRow[j]));
                     xCoords.add(startIndex[j] * 1. / nBasesPerRow[j]);
+                    bp4.relativeXCoords.get(j).getKey().setValue(startIndex[j] * 1. / nBasesPerRow[j]);
                     startIndex[j] = endIndex[j];
+
                 }
                 for (int j = numRows - 1; j > -1; j--) {
                     xCoords.add(endIndex[j] * 1. / nBasesPerRow[j]);
+                    bp4.relativeXCoords.get(j).getValue().setValue(endIndex[j] * 1. / nBasesPerRow[j]);
                 }
-                System.err.println("xcoords size "+xCoords.size());
+                System.err.println("xcoords size " + xCoords.size());
                 BoundPoly3 bp = new BoundPoly3(xCoords);
                 bp.ypos.get(0).setValue(0);
                 bp.ypos.get(5).setValue(1.);
                 for (int k = 0; k < 4; k++) {
                     bp.ypos.get(k + 1).bind(sp.getDividers().get(k).positionProperty());
                 }
+                for (int j = 0; j < numRows; j++) {
+                    Pair<DoubleProperty, DoubleProperty> pair = bp4.relativeYCoords.get(j);
+                    if (j == 0) {
+                        pair.getValue().bind(sp.getDividers().get(0).positionProperty());
+                    } else if (j == numRows - 1) {
+                        pair.getKey().bind(sp.getDividers().get(numRows).positionProperty());
+                        pair.getValue().setValue(1.);
+
+                    } else {
+                        pair.getKey().bind(sp.getDividers().get((2 * j) - 1).positionProperty());
+                        pair.getValue().bind(sp.getDividers().get(2 * j).positionProperty());
+                    }
+                }
 
                 bp.flips.get(0).set(true);
-                bp.flips.get(bp.flips.size()-1).set(true);
+                bp.flips.get(bp.flips.size() - 1).set(true);
 //                bp.flips.get(1).set(true);
 //                bp.flips.get(2).set(true);
                 bp.getPoly().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
                 bp.getPoly().setStroke(new Color(0, 0, 0, 1));
                 bp.xScale.bind(bor.widthProperty());
                 bp.yScale.bind(bor.heightProperty());
+                bp4.xScale.bind(bor.widthProperty());
+                bp4.yScale.bind(bor.heightProperty());
+                bp4.getPath().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
+                bp4.getPath().setStroke(new Color(0, 0, 0, 1));
+                
+                
 
-                root.getChildren().add(bp.getPoly());
-                l.add(bp);
+//                root.getChildren().add(bp.getPoly());
+                root.getChildren().add(bp4.getPath());
+//                l.add(bp); 
+                l.add(bp4);
                 System.out.println("");
             }
         }
