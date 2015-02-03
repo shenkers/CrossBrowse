@@ -48,12 +48,14 @@ public class ChainParser {
 
     private final OverlapDetector<Chain> chains;
 
+    ChainValidationStringency stringency = ChainValidationStringency.silent;
+    
     /**
      * Load UCSC chain file in order to lift over Intervals.
      */
     public ChainParser(File chainFile) {
         IOUtil.assertFileIsReadable(chainFile);
-        chains = Chain.loadChains(chainFile);
+        chains = Chain.loadChains(chainFile, stringency);
     }
 
     /**

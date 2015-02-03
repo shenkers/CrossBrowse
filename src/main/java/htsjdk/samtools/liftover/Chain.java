@@ -318,13 +318,13 @@ class Chain {
      * @param chainFile File in UCSC chain format.
      * @return OverlapDetector will all Chains from reader loaded into it.
      */
-    static OverlapDetector<Chain> loadChains(final File chainFile) {
+    static OverlapDetector<Chain> loadChains(final File chainFile, ChainValidationStringency stringency) {
         final Set<Integer> ids = new HashSet<Integer>();
         BufferedLineReader reader = new BufferedLineReader(IOUtil.openFileForReading(chainFile));
         final OverlapDetector<Chain> ret = new OverlapDetector<Chain>(0, 0);
         Chain chain;
         while ((chain = Chain.loadChain(reader, chainFile.toString())) != null) {
-            if (ids.contains(chain.id)) {
+            if (stringency == ChainValidationStringency.strict && ids.contains(chain.id)) {
                 throw new SAMException("Chain id " + chain.id + " appears more than once in chain file.");
             }
             ids.add(chain.id);
