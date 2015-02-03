@@ -8,10 +8,16 @@ package org.mskcc.shenkers.control.alignment;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import javafx.util.Pair;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.mskcc.shenkers.model.datatypes.Genome;
 
 /**
  *
@@ -22,7 +28,6 @@ public class AlignmentWeaver {
     static class Pos {
 
         // order in the alignment iteration
-
         int order;
         // genomic coord
         int loc;
@@ -34,14 +39,13 @@ public class AlignmentWeaver {
 
         @Override
         public String toString() {
-            return "l=" + loc+ "; o=" + order;
+            return "l=" + loc + "; o=" + order;
         }
     }
 
     static class Ali {
 
         // query to target mapping
-
         Map<Integer, Integer> m;
 
         public Ali(Map<Integer, Integer> m) {
@@ -82,8 +86,7 @@ public class AlignmentWeaver {
         }
         System.out.printf("inc %s\n", inc);
 
-        int maxOrder = 0;
-
+       
         // apply the shift
         for (List<Pos> l : al) {
             for (Pos p : l) {
@@ -92,7 +95,6 @@ public class AlignmentWeaver {
                 } else {
                     p.order = p.order + nInc;
                 }
-                maxOrder = Math.max(maxOrder, p.order);
             }
         }
         System.out.printf("newPos %s\n", al);
@@ -142,6 +144,28 @@ public class AlignmentWeaver {
                 pO = p.order;
             }
             System.out.println();
+        }
+    }
+
+    static Logger logger = LogManager.getLogger();
+    
+    public static void weave(Map<Pair<Genome, Genome>, LocalAlignment> alignments) {
+        Set<Genome> incorporated = new HashSet<>();
+        Map<Genome, Integer> rowOrder = new HashMap<>();
+        Set<Pair<Genome, Genome>> remainder = new HashSet<>(alignments.keySet());
+        
+        while (!remainder.isEmpty()) {
+            Iterator<Pair<Genome, Genome>> it = remainder.iterator();
+            while (it.hasNext()) {
+                Pair<Genome, Genome> p = it.next();
+                if (incorporated.size()==0 || incorporated.contains(p.getKey()) || incorporated.contains(p.getValue())) {
+                    it.remove();
+                    incorporated.add(p.getKey());
+                    incorporated.add(p.getValue());
+                    
+                    logger.info("incorporating pair {} {}",p.getKey().getId(), p.getValue().getId());
+                }
+            }
         }
     }
 }

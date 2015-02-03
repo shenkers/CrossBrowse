@@ -11,8 +11,11 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import javafx.collections.FXCollections;
+import javafx.util.Pair;
 import static org.mskcc.shenkers.control.alignment.AlignmentWeaver.add;
 import static org.mskcc.shenkers.control.alignment.AlignmentWeaver.printAli;
+import org.mskcc.shenkers.model.datatypes.Genome;
 import static org.testng.Assert.*;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -135,6 +138,28 @@ public class AlignmentWeaverNGTest {
             I += inc;
             System.out.println(popped);
         }
+    }
+
+  
+
+
+    /**
+     * Test of weave method, of class AlignmentWeaver.
+     */
+    @Test
+    public void testWeave() {
+        System.out.println("weave");
+        Map<Pair<Genome, Genome>, LocalAlignment> alignments = new HashMap<>();
+        Genome g1 = new Genome("mm10", "mouse");
+        Genome g2 = new Genome("hg19", "human");
+        Genome g3 = new Genome("dm3", "fly");
+        Genome g4 = new Genome("dya", "yak");
+        Genome g5 = new Genome("rnor", "rat");
+        alignments.put(new Pair<>(g1,g2), null);
+        alignments.put(new Pair<>(g2,g3), null);
+        alignments.put(new Pair<>(g3,g4), null);
+        alignments.put(new Pair<>(g4,g5), null);
+        AlignmentWeaver.weave(alignments);
     }
     
 }
