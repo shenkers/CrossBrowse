@@ -276,13 +276,18 @@ public class AlignmentWeaver {
     }
     
      public void printAli2(List<Genome> gOrder) {
+        Integer max = order.values().stream().flatMap(o -> o.stream()).max((i1,i2)->i1-i2).get();
+        logger.info("MAX {}", max);
         for (Genome g : gOrder) {
-            int pO = 0;
+//            int pO = 0;
+            StringBuilder b = new StringBuilder(StringUtils.repeat("-", max+1));
             List<Integer> l = order.get(g);
-            StringBuilder b = new StringBuilder();
+//            StringBuilder b = new StringBuilder();
             for (Integer porder : l) {
-                b.append(StringUtils.repeat("\t", porder - pO) + "X");
-                pO = porder;
+//                logger.info("PORDER {}",porder);
+//                b.append(StringUtils.repeat("\t", porder - pO) + "X");
+                b.setCharAt(porder, 'X');
+//                pO = porder;
             }
             logger.info(b.toString());
         }
