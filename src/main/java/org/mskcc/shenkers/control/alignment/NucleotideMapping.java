@@ -77,6 +77,8 @@ class NucleotideMapping {
         int toStart = alignment.toStart;
         int toEnd = alignment.toEnd;
 
+        assert alignment.fromSequenceName.equals(fromInterval.getSequence()) : String.format("alignment 'from' interval name (%s) should have the same name as constructor 'from' interval (%s)",fromInterval.getSequence(), alignment.fromSequenceName);
+        assert alignment.toSequenceName.equals(toInterval.getSequence()) : String.format("alignment 'to' interval should have the same name as constructor 'to' interval",fromInterval.getSequence(), alignment.fromSequenceName);
         assert IntervalTools.isContained(fromStart, fromEnd, fromInterval.getStart(), fromInterval.getEnd()) : "Alignment should be trimmed to the queried interval";
         assert IntervalTools.isContained(toStart, toEnd, toInterval.getStart(), toInterval.getEnd()) : "Alignment should be trimmed to the queried interval";
 
