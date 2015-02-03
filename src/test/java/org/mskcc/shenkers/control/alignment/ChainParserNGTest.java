@@ -14,11 +14,15 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 import java.util.zip.GZIPInputStream;
 import javafx.util.Pair;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.mskcc.shenkers.model.datatypes.Genome;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.util.IntervalTools;
 import static org.testng.Assert.*;
@@ -53,8 +57,6 @@ public class ChainParserNGTest {
     public void tearDownMethod() throws Exception {
     }
 
-    
-
     public static LocalAlignment trim(LocalAlignment blocks, Interval query_i, Interval target_i) {
 
         List<Pair<Integer, Integer>> fromBlocks = new ArrayList<>();
@@ -77,10 +79,10 @@ public class ChainParserNGTest {
                     int offsetTargetEnd = toBlock.getValue() > target_i.getEnd() ? toBlock.getKey() - target_i.getEnd() : 0;
 
                     Pair<Integer, Integer> offsetToBlock = new Pair<>(toBlock.getKey() + offsetTargetStart, toBlock.getValue() - offsetTargetEnd);
-                    Pair<Integer, Integer> offsetFromBlock = 
-                            blocks.toNegativeStrand ? 
-                            new Pair<>(fromBlock.getKey() + offsetTargetEnd, fromBlock.getValue() - offsetTargetStart) :
-                            new Pair<>(fromBlock.getKey() + offsetTargetStart, fromBlock.getValue() - offsetTargetEnd) ;
+                    Pair<Integer, Integer> offsetFromBlock
+                            = blocks.toNegativeStrand
+                                    ? new Pair<>(fromBlock.getKey() + offsetTargetEnd, fromBlock.getValue() - offsetTargetStart)
+                                    : new Pair<>(fromBlock.getKey() + offsetTargetStart, fromBlock.getValue() - offsetTargetEnd);
 
                     fromBlocks.add(offsetFromBlock);
                     toBlocks.add(offsetToBlock);
@@ -174,6 +176,60 @@ public class ChainParserNGTest {
         //        // TODO review the generated test code and remove the default call to fail.
         //        fail("The test case is a prototype.");
         ;
+    }
+
+    Logger logger = LogManager.getLogger();
+
+    @Test
+    public void testChainWeaving() throws FileNotFoundException {
+//        File f = new File("/home/sol/Downloads/dm3.droYak2.chain");
+        logger.info("test: chain weaving");
+
+        Genome g1 = new Genome("dm3","mel");
+        Genome g2 = new Genome("yak","yak");
+        Genome g3 = new Genome("vir","vir");
+        
+        Interval melInterval = new Interval("3L", 74548, 74869);
+        Interval yakInterval = new Interval("3L", 42088, 42438);
+        Interval virInterval = new Interval("scaffold_13049",2917506,2917933);
+
+        AlignmentWeaver weaver = new AlignmentWeaver(g1, melInterval, false);
+        {
+            File f = new File("/home/sol/lailab/sol/genomes/chains/netChainSubset/dm3.droYak3.net.chain");
+
+            System.out.println("loading chain file");
+            ChainParser instance = new ChainParser(f);
+            System.out.println("calculating intersections");
+            List<LocalAlignment> chainIntersections = instance.getChainIntersections(melInterval);
+            
+            NucleotideMapping mapping = new NucleotideMapping(melInterval, yakInterval);
+            for (LocalAlignment a : chainIntersections) {
+                logger.info("{}:{}-{}", a.fromSequenceName, a.fromStart, a.fromEnd);
+                logger.info("{}:{}-{}", a.toSequenceName, a.toStart, a.toEnd);
+                LocalAlignment trimmed = trim(a, melInterval, yakInterval);
+                mapping.add(trimmed);
+            }
+            weaver.add(yakInterval, g1, g2, mapping);
+        }
+
+        {
+            File f = new File("/home/sol/lailab/sol/genomes/chains/netChainSubset/dm3.droVir3.net.chain");
+
+            System.out.println("loading chain file");
+            ChainParser instance = new ChainParser(f);
+            System.out.println("calculating intersections");
+            List<LocalAlignment> chainIntersections = instance.getChainIntersections(melInterval);
+            logger.info("vir intersections size {}", chainIntersections.size());
+            NucleotideMapping mapping = new NucleotideMapping(melInterval, virInterval);
+            for (LocalAlignment a : chainIntersections) {
+                logger.info("{}:{}-{}", a.toSequenceName, a.toStart, a.toEnd);
+                LocalAlignment trimmed = trim(a, melInterval, virInterval);
+                mapping.add(trimmed);
+            }
+            weaver.add(virInterval, g1, g3, mapping);
+        }
+        
+        weaver.printAli2(Arrays.asList(g1,g2,g3));
     }
 
 }
