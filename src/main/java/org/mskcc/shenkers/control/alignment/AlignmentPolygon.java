@@ -59,8 +59,8 @@ public class AlignmentPolygon {
         for (int i = 0; i < span.size(); i++) {
             GenomeSpan s = span.get(i);
             GenomeSpan d = displayedSpans.get(i);
-            double displayedSpanWidth = d.getWidth() + 0.;
-            double relativeWidth = s.getWidth() / displayedSpanWidth;
+            double displayedSpanWidth = d.length() + 0.;
+            double relativeWidth = s.length() / displayedSpanWidth;
             int distanceFromStart = d.isNegativeStrand() ? d.getEnd() - s.getEnd() : s.getStart() - d.getStart();
 //            int distanceFromStart = d.isNegativeStrand() ? d.getEnd() : d.getStart();
             double relativeStart = (distanceFromStart) / displayedSpanWidth;

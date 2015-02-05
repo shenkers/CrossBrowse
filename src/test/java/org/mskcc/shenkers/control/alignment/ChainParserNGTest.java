@@ -57,7 +57,7 @@ public class ChainParserNGTest {
     public void tearDownMethod() throws Exception {
     }
 
-    public static LocalAlignment trim(LocalAlignment blocks, Interval query_i, Interval target_i) {
+    public static LocalAlignment trim(LocalAlignment blocks, GenomeSpan query_i, GenomeSpan target_i) {
 
         List<Pair<Integer, Integer>> fromBlocks = new ArrayList<>();
         List<Pair<Integer, Integer>> toBlocks = new ArrayList<>();
@@ -133,7 +133,7 @@ public class ChainParserNGTest {
         for (LocalAlignment blocks : chainIntersections) {
 //            chr3L:74548-74869
 //chr3L:42085-42438
-            blocks = trim(blocks, new Interval("chr3L", 74548, 74869), new Interval("chr3L", 42088, 42438));
+            blocks = trim(blocks, new GenomeSpan("chr3L", 74548, 74869, false), new GenomeSpan("chr3L", 42088, 42438, false));
             StringBuilder gapped1 = new StringBuilder();
             StringBuilder gapped2 = new StringBuilder();
 
@@ -189,11 +189,11 @@ public class ChainParserNGTest {
         Genome g2 = new Genome("yak","yak");
         Genome g3 = new Genome("vir","vir");
         
-        Interval melInterval = new Interval("3L", 74548, 74869);
-        Interval yakInterval = new Interval("3L", 42088, 42438);
-        Interval virInterval = new Interval("scaffold_13049",2917506,2917933);
+        GenomeSpan melInterval = new GenomeSpan("3L", 74548, 74869, false);
+        GenomeSpan yakInterval = new GenomeSpan("3L", 42088, 42438, false);
+        GenomeSpan virInterval = new GenomeSpan("scaffold_13049",2917506,2917933, false);
 
-        AlignmentWeaver weaver = new AlignmentWeaver(g1, melInterval, false);
+        AlignmentWeaver weaver = new AlignmentWeaver(g1, melInterval);
         {
             File f = new File("/home/sol/lailab/sol/genomes/chains/netChainSubset/dm3.droYak3.net.chain");
 

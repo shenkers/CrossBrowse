@@ -36,6 +36,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import javafx.util.Pair;
+import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
 /**
  * Java port of UCSC liftOver. Only the most basic liftOver functionality is
@@ -69,6 +70,10 @@ public class ChainParser {
             }
         }
 
+    }
+    
+    public List<LocalAlignment> getChainIntersections(GenomeSpan interval) {
+        return getChainIntersections(new Interval(interval.getChr(), interval.getStart(), interval.getEnd()));
     }
 
     /**

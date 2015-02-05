@@ -75,7 +75,7 @@ public class GenomeSpan {
         this.negativeStrand = negativeStrand;
     }
     
-    public int getWidth(){
+    public int length(){
         return end-start+1;
     }
 

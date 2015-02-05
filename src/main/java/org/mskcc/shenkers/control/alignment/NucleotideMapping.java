@@ -13,25 +13,26 @@ import java.util.stream.Stream;
 import javafx.util.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.util.IntervalTools;
 
 /**
  *
  * @author sol
  */
-class NucleotideMapping {
+public class NucleotideMapping {
 
     static Logger logger = LogManager.getLogger();
 
-    Interval fromInterval;
-    Interval toInterval;
+    GenomeSpan fromInterval;
+    GenomeSpan toInterval;
 
     List<Optional<Integer>> fromRelativeOffset;
     List<Optional<Integer>> fromAbsoluteOffset;
     List<Optional<Integer>> toRelativeOffset;
     List<Optional<Integer>> toAbsoluteOffset;
 
-    public NucleotideMapping(Interval fromInterval, Interval toInterval) {
+    public NucleotideMapping(GenomeSpan fromInterval, GenomeSpan toInterval) {
         this.fromInterval = fromInterval;
         this.toInterval = toInterval;
 //            List<Optional<Integer>> fromRelativeOffset =
@@ -66,6 +67,15 @@ class NucleotideMapping {
 
     }
 
+    private NucleotideMapping(GenomeSpan fromInterval, GenomeSpan toInterval, List<Optional<Integer>> fromRelativeOffset, List<Optional<Integer>> fromAbsoluteOffset, List<Optional<Integer>> toRelativeOffset, List<Optional<Integer>> toAbsoluteOffset) {
+        this.fromInterval = fromInterval;
+        this.toInterval = toInterval;
+        this.fromRelativeOffset = fromRelativeOffset;
+        this.fromAbsoluteOffset = fromAbsoluteOffset;
+        this.toRelativeOffset = toRelativeOffset;
+        this.toAbsoluteOffset = toAbsoluteOffset;
+    }
+
     public void add(LocalAlignment alignment) {
 
         List<Pair<Integer, Integer>> fromBlocks = alignment.fromBlocks;
@@ -77,8 +87,8 @@ class NucleotideMapping {
         int toStart = alignment.toStart;
         int toEnd = alignment.toEnd;
 
-        assert alignment.fromSequenceName.equals(fromInterval.getSequence()) : String.format("alignment 'from' interval name (%s) should have the same name as constructor 'from' interval (%s)",fromInterval.getSequence(), alignment.fromSequenceName);
-        assert alignment.toSequenceName.equals(toInterval.getSequence()) : String.format("alignment 'to' interval should have the same name as constructor 'to' interval",fromInterval.getSequence(), alignment.fromSequenceName);
+        assert alignment.fromSequenceName.equals(fromInterval.getChr()) : String.format("alignment 'from' interval name (%s) should have the same name as constructor 'from' interval (%s)",fromInterval.getChr(), alignment.fromSequenceName);
+        assert alignment.toSequenceName.equals(toInterval.getChr()) : String.format("alignment 'to' interval should have the same name as constructor 'to' interval",fromInterval.getChr(), alignment.fromSequenceName);
         assert IntervalTools.isContained(fromStart, fromEnd, fromInterval.getStart(), fromInterval.getEnd()) : "Alignment should be trimmed to the queried interval";
         assert IntervalTools.isContained(toStart, toEnd, toInterval.getStart(), toInterval.getEnd()) : "Alignment should be trimmed to the queried interval";
 
@@ -107,5 +117,9 @@ class NucleotideMapping {
         logger.info("til {}", toInterval.length(), toRelativeOffset.size());
         logger.info("from {}", fromRelativeOffset);
         logger.info("to {}", toRelativeOffset);
+    }
+    
+    public NucleotideMapping inverse(){
+        return new NucleotideMapping(toInterval, fromInterval, toRelativeOffset, toAbsoluteOffset, fromRelativeOffset, fromAbsoluteOffset);
     }
 }

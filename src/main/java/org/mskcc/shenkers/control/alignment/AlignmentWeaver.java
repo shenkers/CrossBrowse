@@ -23,6 +23,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mskcc.shenkers.model.datatypes.Genome;
+import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
 /**
  *
@@ -32,18 +33,13 @@ public class AlignmentWeaver {
 
     Map<Genome, List<Integer>> order = new HashMap<>();
 
-    AlignmentWeaver(Genome fromGenome, Interval fromInterval, boolean isNegativeStrand) {
+    public AlignmentWeaver(Genome fromGenome, GenomeSpan fromInterval) {
 
         List<Integer> o = new ArrayList<>(fromInterval.length());
-        if (isNegativeStrand) {
-            for (int i = fromInterval.length() - 1; i > -1; i--) {
-                o.add(i);
-            }
-        } else {
-            for (int i = 0; i < fromInterval.length(); i++) {
-                o.add(i);
-            }
+        for (int i = fromInterval.length() - 1; i > -1; i--) {
+            o.add(i);
         }
+
         order.put(fromGenome, o);
     }
 
@@ -73,6 +69,14 @@ public class AlignmentWeaver {
         public Ali(Map<Integer, Integer> m) {
             this.m = m;
         }
+    }
+    
+    /**
+     * 
+     * @return the alignment order for nucleotides in each genome
+     */
+    public Map<Genome,List<Integer>> getOrder(){
+        return order;
     }
 
     public static void add(List<List<Pos>> al, List<Integer> newSeq, int prevSeq, Ali a) {
@@ -157,7 +161,7 @@ public class AlignmentWeaver {
         al.add(newPos);
     }
 
-    public void add(Interval toInterval, Genome fromGenome, Genome toGenome, NucleotideMapping a) {
+    public void add(GenomeSpan toInterval, Genome fromGenome, Genome toGenome, NucleotideMapping fromGenomeToGenome) {
         // the sequence that we are aligning to
         List<Integer> fromGenomeOrder = order.get(fromGenome);
 
@@ -169,7 +173,7 @@ public class AlignmentWeaver {
         for (int i = 0; i < fromGenomeOrder.size(); i++) {
             Integer fOrder = fromGenomeOrder.get(i);
 
-            a.fromRelativeOffset.get(i).ifPresent(relativeOffset -> {
+            fromGenomeToGenome.fromRelativeOffset.get(i).ifPresent(relativeOffset -> {
                 int o = relativeOffset;
                 newSeqOrder.set(o, Optional.of(fOrder));
             });
@@ -180,16 +184,16 @@ public class AlignmentWeaver {
         System.out.printf("newSeqOrder %s\n", newSeqOrder);
 
         List<Integer> orderShifts = new ArrayList<>();
-        
+
         int nInc = 0;
-            
+
         {
             int pInc = 0;
             for (int j = 0; j < toInterval.length(); j++) {
                 Optional<Integer> nOrder = newSeqOrder.get(j);
                 if (nOrder.isPresent()) {
                     int oldOrder = nOrder.get();
-                    while(orderShifts.size()<oldOrder){
+                    while (orderShifts.size() < oldOrder) {
                         orderShifts.add(pInc);
                     }
                     orderShifts.add(nInc);
@@ -198,15 +202,15 @@ public class AlignmentWeaver {
                     nInc++;
                 }
             }
-            logger.info("inc4 {}",orderShifts);
+            logger.info("inc4 {}", orderShifts);
         }
-       
-       // apply the shift
+
+        // apply the shift
         for (Genome g : order.keySet()) {
             List<Integer> gOrder = order.get(g);
             for (int j = 0; j < gOrder.size(); j++) {
                 int o = gOrder.get(j);
-                if (o<orderShifts.size()) {
+                if (o < orderShifts.size()) {
 //                    logger.info("o {} inc {} inc2 {}", o, inc.get(o), inc2.get(j));
 //                    assert inc.get(gOrder.get(j)).equals(inc4.get(o)) : "incs not equal";
 //                    o = o + inc.get(gOrder.get(j));
@@ -215,7 +219,7 @@ public class AlignmentWeaver {
 //                    o = o + nInc;
                     gOrder.set(j, o + nInc);
                 }
-                
+
             }
         }
         logger.info("newPos {}\n", order);
@@ -224,12 +228,12 @@ public class AlignmentWeaver {
             Optional<Integer> o = Optional.empty();
             return o;
         }).collect(Collectors.toList());
-        
+
         // figure out the order for aligned positions relative to the shifted positions
         for (int i = 0; i < fromGenomeOrder.size(); i++) {
             Integer fOrder = fromGenomeOrder.get(i);
 
-            a.fromRelativeOffset.get(i).ifPresent(relativeOffset -> {
+            fromGenomeToGenome.fromRelativeOffset.get(i).ifPresent(relativeOffset -> {
                 int o = relativeOffset;
                 newSeqOrder2.set(o, Optional.of(fOrder));
             });
@@ -274,13 +278,13 @@ public class AlignmentWeaver {
             System.out.println();
         }
     }
-    
-     public void printAli2(List<Genome> gOrder) {
-        Integer max = order.values().stream().flatMap(o -> o.stream()).max((i1,i2)->i1-i2).get();
+
+    public void printAli2(List<Genome> gOrder) {
+        Integer max = order.values().stream().flatMap(o -> o.stream()).max((i1, i2) -> i1 - i2).get();
         logger.info("MAX {}", max);
         for (Genome g : gOrder) {
 //            int pO = 0;
-            StringBuilder b = new StringBuilder(StringUtils.repeat("-", max+1));
+            StringBuilder b = new StringBuilder(StringUtils.repeat("-", max + 1));
             List<Integer> l = order.get(g);
 //            StringBuilder b = new StringBuilder();
             for (Integer porder : l) {

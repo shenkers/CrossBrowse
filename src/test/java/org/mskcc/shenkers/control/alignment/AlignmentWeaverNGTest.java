@@ -22,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 import static org.mskcc.shenkers.control.alignment.AlignmentWeaver.add;
 import static org.mskcc.shenkers.control.alignment.AlignmentWeaver.printAli;
 import org.mskcc.shenkers.model.datatypes.Genome;
+import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.util.IntervalTools;
 import static org.testng.Assert.*;
 import org.testng.annotations.AfterClass;
@@ -191,9 +192,9 @@ public class AlignmentWeaverNGTest {
         LocalAlignment r = new LocalAlignment("a", "c", true, l1, l3);
         LocalAlignment x = new LocalAlignment("a", "c", false, l4, l5);
 
-        NucleotideMapping nmf = new NucleotideMapping(new Interval("a", 10, 36), new Interval("b", 13, 33));
+        NucleotideMapping nmf = new NucleotideMapping(new GenomeSpan("a", 10, 36, false), new GenomeSpan("b", 13, 33, false));
         nmf.add(f);
-        NucleotideMapping nmr = new NucleotideMapping(new Interval("a", 10, 36), new Interval("c", 1, 23));
+        NucleotideMapping nmr = new NucleotideMapping(new GenomeSpan("a", 10, 36, false), new GenomeSpan("c", 1, 23, false));
         nmr.add(r);
         nmr.add(x);
     }
@@ -209,21 +210,21 @@ public class AlignmentWeaverNGTest {
         Genome g4 = new Genome("dya", "yak");
         Genome g5 = new Genome("rnor", "rat");
 
-        Interval i1 = new Interval("", 0, 2);
-        Interval i2 = new Interval("", 0, 1);
-        Interval i3 = new Interval("", 0, 2);
-        Interval i4 = new Interval("", 0, 2);
-        Interval i5 = new Interval("", 0, 2);
+        GenomeSpan i1 = new GenomeSpan("", 0, 2, false);
+        GenomeSpan i2 = new GenomeSpan("", 0, 1, false);
+        GenomeSpan i3 = new GenomeSpan("", 0, 2, false);
+        GenomeSpan i4 = new GenomeSpan("", 0, 2, false);
+        GenomeSpan i5 = new GenomeSpan("", 0, 2, false);
 
         AlignmentWeaver weaver = null;
         {
 
-            weaver = new AlignmentWeaver(g1, i1, false);
+            weaver = new AlignmentWeaver(g1, i1);
             logger.info("w_order {}", weaver.order);
         }
         {
-            Interval fromInterval = i1;
-            Interval toInterval = i2;
+            GenomeSpan fromInterval = i1;
+            GenomeSpan toInterval = i2;
             Genome fromGenome = g1;
             Genome toGenome = g2;
             NucleotideMapping mapping = new NucleotideMapping(fromInterval, toInterval);
@@ -239,8 +240,8 @@ public class AlignmentWeaverNGTest {
         logger.info("w_order {}", weaver.order);
 
         {
-            Interval fromInterval = i2;
-            Interval toInterval = i3;
+            GenomeSpan fromInterval = i2;
+            GenomeSpan toInterval = i3;
             Genome fromGenome = g2;
             Genome toGenome = g3;
             NucleotideMapping mapping = new NucleotideMapping(fromInterval, toInterval);
@@ -256,8 +257,8 @@ public class AlignmentWeaverNGTest {
         logger.info("w_order {}", weaver.order);
 
         {
-            Interval fromInterval = i3;
-            Interval toInterval = i4;
+            GenomeSpan fromInterval = i3;
+            GenomeSpan toInterval = i4;
             Genome fromGenome = g3;
             Genome toGenome = g4;
             NucleotideMapping mapping = new NucleotideMapping(fromInterval, toInterval);
@@ -271,8 +272,8 @@ public class AlignmentWeaverNGTest {
         logger.info("w_order {}", weaver.order);
 
         {
-            Interval fromInterval = i4;
-            Interval toInterval = i5;
+            GenomeSpan fromInterval = i4;
+            GenomeSpan toInterval = i5;
             Genome fromGenome = g4;
             Genome toGenome = g5;
             NucleotideMapping mapping = new NucleotideMapping(fromInterval, toInterval);
