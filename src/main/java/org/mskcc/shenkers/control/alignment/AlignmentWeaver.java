@@ -168,7 +168,8 @@ public class AlignmentWeaver {
         Boolean fromNegativeWithRespectToFounder = negativeWithRespectToFounder.get(fromGenome);
         // if we are on the same strand as the fromGenome, we have the same orientation with respect ot the founder
         boolean oppositeToFounder = toNegativeStrand ? !fromNegativeWithRespectToFounder : fromNegativeWithRespectToFounder;
-
+        negativeWithRespectToFounder.put(toGenome, oppositeToFounder);
+        
         // the sequence that we are aligning to
         List<Integer> fromGenomeOrder = order.get(fromGenome);
 
