@@ -673,8 +673,8 @@ public class AlignmentOverlayNGTest extends Application {
      */
     @org.testng.annotations.Test
     public void test() {
-        launch(new String[0]);
-        fail("The test case is a prototype.");
+//        launch(new String[0]);
+//        fail("The test case is a prototype.");
     }
 
 }

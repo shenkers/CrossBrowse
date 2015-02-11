@@ -100,9 +100,9 @@ public class VerticalOverlayNGTest extends Application {
 
     @Test
     public void testSomeMethod() {
-        launch(new String[0]);
+//        launch(new String[0]);
         // TODO review the generated test code and remove the default call to fail.
-        fail("The test case is a prototype.");
+//        fail("The test case is a prototype.");
     }
 
 }

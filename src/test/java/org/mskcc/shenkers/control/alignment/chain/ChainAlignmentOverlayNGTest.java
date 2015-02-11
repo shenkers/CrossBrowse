@@ -83,7 +83,7 @@ public class ChainAlignmentOverlayNGTest extends Application {
 //    }
     @Test
     public void testAlignmentColumnsOverlay() {
-        launch();
+//        launch();
     }
     
     List<DoubleProperty> dividerPositionProperties;
