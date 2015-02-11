@@ -13,6 +13,7 @@ import java.util.function.Predicate;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javafx.beans.binding.Bindings;
+import javafx.beans.value.ObservableValue;
 import javafx.event.ActionEvent;
 import javafx.fxml.Initializable;
 import javafx.scene.control.Button;
@@ -25,6 +26,8 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Window;
 import javafx.util.Callback;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -36,6 +39,8 @@ import org.mskcc.shenkers.model.datatypes.Genome;
  */
 public class CoordinateInputController implements Initializable {
 
+    Logger logger = LogManager.getLogger();
+    
     @FXML
     private FlowPane child;
 
@@ -51,6 +56,18 @@ public class CoordinateInputController implements Initializable {
     Pattern coordinatePattern;
 
     ModelSingleton model;
+    
+     @FXML
+    public void flipSelectedSpan(ActionEvent event) {
+        logger.info("processing flip");
+        Genome g = genomeSelected.getSelectionModel().getSelectedItem();
+        if(g!=null){
+        
+            ObservableValue<Optional<GenomeSpan>> span = model.getSpan(g);
+            span.getValue().ifPresent(s -> { model.setSpan(g, Optional.of(new GenomeSpan(s.getChr(), s.getStart(), s.getEnd(), !s.isNegativeStrand())));});
+
+        }
+    }
 
     @FXML
     public void parseAndUpdateCoordinates(ActionEvent event) {
