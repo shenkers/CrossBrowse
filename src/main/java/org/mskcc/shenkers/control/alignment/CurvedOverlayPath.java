@@ -9,8 +9,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import javafx.beans.binding.DoubleBinding;
+import javafx.beans.binding.NumberBinding;
+import javafx.beans.binding.When;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.value.ObservableDoubleValue;
 import javafx.scene.shape.CubicCurveTo;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
@@ -39,7 +44,7 @@ public class CurvedOverlayPath {
     List<Pair<DoubleBinding, DoubleBinding>> componentXCoords;
     List<Pair<DoubleBinding, DoubleBinding>> componentYCoords;
 
-    private List<DoubleProperty> genomeFlipped;
+    private List<BooleanProperty> genomeFlipped;
 
     List<PathElement> pathElements;
 
@@ -81,7 +86,7 @@ public class CurvedOverlayPath {
     /**
      * @return the genomeFlipped
      */
-    public List<DoubleProperty> getGenomeFlipped() {
+    public List<BooleanProperty> getGenomeFlipped() {
         return genomeFlipped;
     }
 
@@ -90,6 +95,40 @@ public class CurvedOverlayPath {
         first, middle, l_even, l_odd, r_even, r_odd, last;
 
     };
+
+    class ComplementBinding extends DoubleBinding {
+
+        boolean isFirst;
+        BooleanProperty complemented;
+        ObservableDoubleValue lower;
+        ObservableDoubleValue upper;
+
+        public ComplementBinding(boolean isFirst, BooleanProperty complemented, ObservableDoubleValue lower, ObservableDoubleValue upper) {
+            super.bind(complemented, lower, upper);
+            this.isFirst = isFirst;
+            this.complemented = complemented;
+            this.lower = lower;
+            this.upper = upper;
+        }
+
+        @Override
+        protected double computeValue() {
+            if (isFirst) {
+                if (complemented.get()) {
+                    return 1 - upper.doubleValue();
+                } else {
+                    return lower.doubleValue();
+                }
+            } else {
+                if (complemented.get()) {
+                    return 1 - lower.doubleValue();
+                } else {
+                    return upper.doubleValue();
+                }
+            }
+        }
+
+    }
 
     public CurvedOverlayPath(int nGenomes) {
 
@@ -100,11 +139,16 @@ public class CurvedOverlayPath {
         relativeYCoords = new ArrayList<>();
         componentXCoords = new ArrayList<>();
         componentYCoords = new ArrayList<>();
+        genomeFlipped = new ArrayList<>();
 
         for (int i = 0; i < nGenomes; i++) {
             relativeXCoords.add(new Pair<>(new SimpleDoubleProperty(), new SimpleDoubleProperty()));
             relativeYCoords.add(new Pair<>(new SimpleDoubleProperty(), new SimpleDoubleProperty()));
-            componentXCoords.add(new Pair<>(getRelativeXCoords().get(i).getKey().multiply(getXScale()), getRelativeXCoords().get(i).getValue().multiply(getXScale())));
+            BooleanProperty flipped = new SimpleBooleanProperty(false);
+            genomeFlipped.add(flipped);
+            DoubleProperty lower = getRelativeXCoords().get(i).getKey();
+            DoubleProperty upper = getRelativeXCoords().get(i).getKey();
+            componentXCoords.add(new Pair<>(new ComplementBinding(true, flipped, lower, upper).multiply(getXScale()), new ComplementBinding(false, flipped, lower, upper).multiply(getXScale())));
             componentYCoords.add(new Pair<>(getRelativeYCoords().get(i).getKey().multiply(getYScale()), getRelativeYCoords().get(i).getValue().multiply(getYScale())));
         }
 

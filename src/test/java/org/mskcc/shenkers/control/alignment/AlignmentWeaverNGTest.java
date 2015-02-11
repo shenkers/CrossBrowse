@@ -235,7 +235,7 @@ public class AlignmentWeaverNGTest {
                     Arrays.asList(
                             new Pair(0, 0),
                             new Pair(1, 1))));
-            weaver.add(toInterval, fromGenome, toGenome, mapping);
+            weaver.add(toInterval, fromGenome, toGenome, false, mapping);
         }
         logger.info("w_order {}", weaver.order);
 
@@ -252,7 +252,7 @@ public class AlignmentWeaverNGTest {
                     Arrays.asList(
                             new Pair(0, 0),
                             new Pair(2, 2))));
-            weaver.add(toInterval, fromGenome, toGenome, mapping);
+            weaver.add(toInterval, fromGenome, toGenome, false, mapping);
         }
         logger.info("w_order {}", weaver.order);
 
@@ -267,7 +267,7 @@ public class AlignmentWeaverNGTest {
                             new Pair(0, 0)),
                     Arrays.asList(
                             new Pair(2, 2))));
-            weaver.add(toInterval, fromGenome, toGenome, mapping);
+            weaver.add(toInterval, fromGenome, toGenome, false, mapping);
         }
         logger.info("w_order {}", weaver.order);
 
@@ -282,7 +282,7 @@ public class AlignmentWeaverNGTest {
                             new Pair(2, 2)),
                     Arrays.asList(
                             new Pair(0, 0))));
-            weaver.add(toInterval, fromGenome, toGenome, mapping);
+            weaver.add(toInterval, fromGenome, toGenome, false, mapping);
         }
         logger.info("w_order {}", weaver.order);
         weaver.printAli2(Arrays.asList(g1,g2,g3,g4,g5));

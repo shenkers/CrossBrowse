@@ -27,6 +27,7 @@ import org.mskcc.shenkers.control.alignment.LocalAlignment;
 import org.mskcc.shenkers.control.alignment.NucleotideMapping;
 import org.mskcc.shenkers.model.datatypes.Genome;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
+import org.mskcc.shenkers.util.IntervalTools;
 
 /**
  *
@@ -37,6 +38,10 @@ public class ChainAlignmentOverlay {
     Logger logger = LogManager.getLogger();
 
     Map<Pair<Genome, Genome>, AlignmentSource> alignmentSources;
+
+    public ChainAlignmentOverlay(Map<Pair<Genome, Genome>, AlignmentSource> alignmentSources) {
+        this.alignmentSources = alignmentSources;
+    }
 
     private AlignmentWeaver initializeWeaver(Pair<Genome, Genome> genomePair, Map<Genome, GenomeSpan> displayedSpans) {
         Genome fromGenome = genomePair.getKey();
@@ -49,11 +54,18 @@ public class ChainAlignmentOverlay {
 
         NucleotideMapping mappingFromGenomeToGenome = new NucleotideMapping(fromInterval, toInterval);
 
+        logger.info("Adding alignments from {} to {}", fromGenome, toGenome);
+        Set<Boolean> toNegativeStrand = new HashSet<>();
         for (LocalAlignment localAlignment : alignmentSources.get(genomePair).getAlignment(fromInterval, toInterval)) {
-            mappingFromGenomeToGenome.add(localAlignment);
+            logger.info("before trim: {}-{}",localAlignment.getToStart(), localAlignment.getToEnd());
+            logger.info("after trim: {}-{}",localAlignment.trim(fromInterval, toInterval).getToStart(), localAlignment.trim(fromInterval, toInterval).getToEnd());
+            mappingFromGenomeToGenome.add(localAlignment.trim(fromInterval, toInterval));
+            toNegativeStrand.add(localAlignment.getToNegativeStrand());
         }
+        
+        assert toNegativeStrand.size()==1 : "Can't represent alignments go to plus and minus strand yet";
 
-        weaver.add(toInterval, fromGenome, toGenome, mappingFromGenomeToGenome);
+        weaver.add(toInterval, fromGenome, toGenome, toNegativeStrand.iterator().next(), mappingFromGenomeToGenome);
 
         return weaver;
     }
@@ -68,22 +80,32 @@ public class ChainAlignmentOverlay {
 
         // since the pairwise alignment has a polarity, need to make 
         // sure it's going the correct direction to be woven
-        boolean alignmentInverted = toAdd.equals(toGenome);
+        boolean alignmentInverted = toAdd.equals(fromGenome);
 
         NucleotideMapping mappingFromGenomeToGenome = new NucleotideMapping(fromInterval, toInterval);
 
-        for (LocalAlignment localAlignment : alignmentSources.get(genomePair).getAlignment(fromInterval, toInterval)) {
-            mappingFromGenomeToGenome.add(localAlignment);
-        }
-
+        logger.info("Adding alignments from {} to {}", fromGenome, toGenome);
+         Set<Boolean> toNegativeStrand = new HashSet<>();
+       for (LocalAlignment localAlignment : alignmentSources.get(genomePair).getAlignment(fromInterval, toInterval)) {
+               logger.info("before trim to {}: {}-{}", toInterval, localAlignment.getToStart(), localAlignment.getToEnd());
+            logger.info("after trim: {}-{}",localAlignment.trim(fromInterval, toInterval).getToStart(), localAlignment.trim(fromInterval, toInterval).getToEnd());
+         
+           mappingFromGenomeToGenome.add(localAlignment.trim(fromInterval, toInterval));
+                 toNegativeStrand.add(localAlignment.getToNegativeStrand());
+   }
+        assert toNegativeStrand.size()==1 : "Can't represent alignments go to plus and minus strand yet";
         if (alignmentInverted) {
-            weaver.add(fromInterval, toGenome, fromGenome, mappingFromGenomeToGenome.inverse());
+            weaver.add(fromInterval, toGenome, fromGenome, toNegativeStrand.iterator().next(), mappingFromGenomeToGenome.inverse());
         } else {
-            weaver.add(toInterval, fromGenome, toGenome, mappingFromGenomeToGenome);
+            weaver.add(toInterval, fromGenome, toGenome, toNegativeStrand.iterator().next(), mappingFromGenomeToGenome);
         }
     }
+    
+    
 
-    public void weave(Map<Genome, GenomeSpan> displayedSpans) {
+    public List<Map<Genome, Pair<Double, Double>>> getAlignmentColumnsRelativeX(Map<Genome, GenomeSpan> displayedSpans, int basesPerColumn) {
+        assert basesPerColumn > 0 : String.format("basesPerColumn should b > 0, (got %d)", basesPerColumn);
+        
         Set<Genome> incorporated = new HashSet<>();
         Set<Pair<Genome, Genome>> remainder = new HashSet<>(alignmentSources.keySet());
 
@@ -103,9 +125,10 @@ public class ChainAlignmentOverlay {
                     incorporated.add(p.getValue());
 
                     if (weaver == null) {
-                        weaver = initializeWeaver(it.next(), displayedSpans);
+                        weaver = initializeWeaver(p, displayedSpans);
                     } else {
                         Genome toAdd = incorporated.contains(p.getKey()) ? p.getValue() : p.getKey();
+                        logger.info("adding {} to the alignment",toAdd);
                         addAlignment(p, toAdd, displayedSpans, weaver);
                     }
                 }
@@ -113,72 +136,72 @@ public class ChainAlignmentOverlay {
         }
 
         Map<Genome, List<Integer>> order = weaver.getOrder();
-
-        int inc = 3;
-
+        
+        logger.info("order keyset {}", order.keySet());
+     
         Integer max = order.values().stream().flatMap(o -> o.stream()).max((x, y) -> x - y).get();
 
+        Map<Genome, Integer> displayedSpanLength = displayedSpans.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().length()));
+
         List<Map<Genome, Pair<Double, Double>>> relativeCoordinates = new ArrayList<>();
-        Map<Genome, Pair<Integer, Integer>> previous = displayedSpans.keySet().stream().collect(Collectors.toMap(g -> g, g -> new Pair<Integer, Integer>(0, 0)));
-        for (int i = 0; i <= max; i += inc) {
-            Map<Genome, Pair<Integer, Integer>> extremeAbsoluteX = new HashMap<>();
+        Map<Genome, Pair<Double, Double>> previous = displayedSpans.keySet().stream().collect(Collectors.toMap(g -> g, g -> new Pair<Double, Double>(0., 0.)));
+        for (int i = 0; i <= max; i += basesPerColumn) {
+            Map<Genome, Pair<Double, Double>> relativeX = new HashMap<>();
+            relativeCoordinates.add(relativeX);
 
             for (Genome g : displayedSpans.keySet()) {
                 List<Integer> gOrder = order.get(g);
+                int l = displayedSpanLength.get(g);
 
                 List<Integer> indices = new ArrayList<>();
-                for (int j = i; j < i + inc; j++) {
+                for (int j = i; j < i + basesPerColumn; j++) {
                     int index = gOrder.indexOf(j);
                     if (index != -1) {
                         indices.add(index);
                     }
                 }
-                Pair<Integer, Integer> next = null;
+                Pair<Double, Double> next = null;
                 if (indices.size() > 0) {
-                    next = new Pair<>(Collections.min(indices), Collections.max(indices));
+                    next = new Pair<>((Collections.min(indices) + 0. )/ l, (Collections.max(indices) + 1. )/ l);
                 } else {
-                    next = previous.get(g);
+                   next = new Pair<>(previous.get(g).getValue(),previous.get(g).getValue());
                 }
-                extremeAbsoluteX.put(g, next);
+                relativeX.put(g, next);
+                
             }
-            for (int j = 0; j < numRows; j++) {
-                if (alignment[j].charAt(i) != '-') {
-                    endIndex[j]++;
-                }
-            }
+            
+            
+            previous = relativeX;
 
-            if ((i + 1) % b == 0) {
+        }
+        if(max % basesPerColumn != 0){
+            int remainingColumns = max % basesPerColumn;
+            
+            Map<Genome, Pair<Double, Double>> relativeX = new HashMap<>();
+            relativeCoordinates.add(relativeX);
 
-                BoundPoly4 bp4 = new AlignmentOverlayNGTest.BoundPoly4(3);
-                List<Double> xCoords = new ArrayList<>();
-                for (int j = 0; j < numRows; j++) {
-//                    System.out.println(Arrays.asList(startIndex[j], endIndex[j]));
-                    System.out.println(Arrays.asList(startIndex[j] * 1. / nBasesPerRow[j], endIndex[j] * 1. / nBasesPerRow[j]));
-                    xCoords.add(startIndex[j] * 1. / nBasesPerRow[j]);
-                    bp4.relativeXCoords.get(j).getKey().setValue(startIndex[j] * 1. / nBasesPerRow[j]);
-                    startIndex[j] = endIndex[j];
+            for (Genome g : displayedSpans.keySet()) {
+                List<Integer> gOrder = order.get(g);
+                int l = displayedSpanLength.get(g);
 
-                }
-                relativeXCoords.add(null)
-            }
-
-            boolean hasSome = true;
-            while (hasSome) {
-                hasSome = false;
-                List<List<Integer>> popped = new ArrayList<List<Integer>>();
-                Iterator<List<AlignmentWeaver.Pos>> it = ali.iterator();
-                while (it.hasNext()) {
-                    List<AlignmentWeaver.Pos> l = it.next();
-                    List<AlignmentWeaver.Pos> p = new ArrayList<AlignmentWeaver.Pos>();
-                    popped.add(p);
-                    while (l.size() > 0 && l.get(0).order < I + inc) {
-                        p.add(l.remove(0));
+                List<Integer> indices = new ArrayList<>();
+                for (int j = max - remainingColumns; j <= max; j++) {
+                    int index = gOrder.indexOf(j);
+                    if (index != -1) {
+                        indices.add(index);
                     }
-                    hasSome |= l.size() > 0;
                 }
-                I += inc;
-                System.out.println(popped);
+                Pair<Double, Double> next = null;
+                if (indices.size() > 0) {
+                    next = new Pair<>((Collections.min(indices) + 0. )/ l, (Collections.max(indices) + 1. )/ l);
+                } else {
+                    next = new Pair<>(previous.get(g).getValue(),previous.get(g).getValue());
+                }
+                relativeX.put(g, next);
+                
             }
         }
 
+        return relativeCoordinates;
     }
+}

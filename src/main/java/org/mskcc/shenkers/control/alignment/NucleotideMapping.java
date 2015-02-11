@@ -81,16 +81,21 @@ public class NucleotideMapping {
         List<Pair<Integer, Integer>> fromBlocks = alignment.fromBlocks;
         List<Pair<Integer, Integer>> toBlocks = alignment.toBlocks;
 
-        int fromStart = alignment.fromStart;
-        int fromEnd = alignment.fromEnd;
+        int fromStart = alignment.getFromStart();
+        int fromEnd = alignment.getFromEnd();
 
-        int toStart = alignment.toStart;
-        int toEnd = alignment.toEnd;
+        int toStart = alignment.getToStart();
+        int toEnd = alignment.getToEnd();
 
-        assert alignment.fromSequenceName.equals(fromInterval.getChr()) : String.format("alignment 'from' interval name (%s) should have the same name as constructor 'from' interval (%s)",fromInterval.getChr(), alignment.fromSequenceName);
-        assert alignment.toSequenceName.equals(toInterval.getChr()) : String.format("alignment 'to' interval should have the same name as constructor 'to' interval",fromInterval.getChr(), alignment.fromSequenceName);
+        assert alignment.fromSequenceName.equals(fromInterval.getChr()) : String.format("alignment 'from' interval name (%s) should have the same name as constructor 'from' interval (%s)", fromInterval.getChr(), alignment.fromSequenceName);
+        assert alignment.toSequenceName.equals(toInterval.getChr()) : String.format("alignment 'to' interval should have the same name as constructor 'to' interval", fromInterval.getChr(), alignment.fromSequenceName);
         assert IntervalTools.isContained(fromStart, fromEnd, fromInterval.getStart(), fromInterval.getEnd()) : "Alignment should be trimmed to the queried interval";
-        assert IntervalTools.isContained(toStart, toEnd, toInterval.getStart(), toInterval.getEnd()) : "Alignment should be trimmed to the queried interval";
+        assert IntervalTools.isContained(toStart, toEnd, toInterval.getStart(), toInterval.getEnd()) :
+                String.format("Alignment should be trimmed to the queried interval. "
+                        + "%s:%d-%d is not contained in %s:%d-%d",
+                        alignment.toSequenceName, toStart, toEnd,
+                        toInterval.getChr(), toInterval.getStart(), toInterval.getEnd()
+                );
 
         logger.info("nBlocks {}", alignment.getNBlocks());
         for (int i = 0; i < alignment.getNBlocks(); i++) {
@@ -118,8 +123,8 @@ public class NucleotideMapping {
         logger.info("from {}", fromRelativeOffset);
         logger.info("to {}", toRelativeOffset);
     }
-    
-    public NucleotideMapping inverse(){
+
+    public NucleotideMapping inverse() {
         return new NucleotideMapping(toInterval, fromInterval, toRelativeOffset, toAbsoluteOffset, fromRelativeOffset, fromAbsoluteOffset);
     }
 }

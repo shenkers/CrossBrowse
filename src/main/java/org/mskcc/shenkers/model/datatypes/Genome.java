@@ -53,4 +53,10 @@ public class Genome {
     public void setDescription(String description) {
         this.description = description;
     }
+
+    @Override
+    public String toString() {
+        return String.format("%s (%s)", description, id);
+    }
+
 }

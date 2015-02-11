@@ -32,15 +32,17 @@ import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 public class AlignmentWeaver {
 
     Map<Genome, List<Integer>> order = new HashMap<>();
+    Map<Genome, Boolean> negativeWithRespectToFounder = new HashMap<>();
 
     public AlignmentWeaver(Genome fromGenome, GenomeSpan fromInterval) {
 
         List<Integer> o = new ArrayList<>(fromInterval.length());
-        for (int i = fromInterval.length() - 1; i > -1; i--) {
+        for (int i = 0; i < fromInterval.length(); i++) {
             o.add(i);
         }
 
         order.put(fromGenome, o);
+        negativeWithRespectToFounder.put(fromGenome, Boolean.FALSE);
     }
 
     static class Pos {
@@ -70,12 +72,12 @@ public class AlignmentWeaver {
             this.m = m;
         }
     }
-    
+
     /**
-     * 
+     *
      * @return the alignment order for nucleotides in each genome
      */
-    public Map<Genome,List<Integer>> getOrder(){
+    public Map<Genome, List<Integer>> getOrder() {
         return order;
     }
 
@@ -161,7 +163,12 @@ public class AlignmentWeaver {
         al.add(newPos);
     }
 
-    public void add(GenomeSpan toInterval, Genome fromGenome, Genome toGenome, NucleotideMapping fromGenomeToGenome) {
+    public void add(GenomeSpan toInterval, Genome fromGenome, Genome toGenome, boolean toNegativeStrand, NucleotideMapping fromGenomeToGenome) {
+        // figure out if the toGenome is negative with respect to the founder
+        Boolean fromNegativeWithRespectToFounder = negativeWithRespectToFounder.get(fromGenome);
+        // if we are on the same strand as the fromGenome, we have the same orientation with respect ot the founder
+        boolean oppositeToFounder = toNegativeStrand ? !fromNegativeWithRespectToFounder : fromNegativeWithRespectToFounder;
+
         // the sequence that we are aligning to
         List<Integer> fromGenomeOrder = order.get(fromGenome);
 
@@ -188,18 +195,35 @@ public class AlignmentWeaver {
         int nInc = 0;
 
         {
-            int pInc = 0;
-            for (int j = 0; j < toInterval.length(); j++) {
-                Optional<Integer> nOrder = newSeqOrder.get(j);
-                if (nOrder.isPresent()) {
-                    int oldOrder = nOrder.get();
-                    while (orderShifts.size() < oldOrder) {
-                        orderShifts.add(pInc);
+            if (oppositeToFounder) {
+                int pInc = 0;
+                for (int j = toInterval.length() - 1; j > -1; j--) {
+                    Optional<Integer> nOrder = newSeqOrder.get(j);
+                    if (nOrder.isPresent()) {
+                        int oldOrder = nOrder.get();
+                        while (orderShifts.size() < oldOrder) {
+                            orderShifts.add(pInc);
+                        }
+                        orderShifts.add(nInc);
+                        pInc = nInc;
+                    } else {
+                        nInc++;
                     }
-                    orderShifts.add(nInc);
-                    pInc = nInc;
-                } else {
-                    nInc++;
+                }
+            } else {
+                int pInc = 0;
+                for (int j = 0; j < toInterval.length(); j++) {
+                    Optional<Integer> nOrder = newSeqOrder.get(j);
+                    if (nOrder.isPresent()) {
+                        int oldOrder = nOrder.get();
+                        while (orderShifts.size() < oldOrder) {
+                            orderShifts.add(pInc);
+                        }
+                        orderShifts.add(nInc);
+                        pInc = nInc;
+                    } else {
+                        nInc++;
+                    }
                 }
             }
             logger.info("inc4 {}", orderShifts);
@@ -242,25 +266,45 @@ public class AlignmentWeaver {
         logger.info("newSeqOrder2 {}\n", newSeqOrder2);
 
         // flow the order back to unlabeled positions
-        for (int j = toInterval.length() - 1; j > -1; j--) {
-            Optional<Integer> o = newSeqOrder2.get(j);
-            if (!o.isPresent()) {
-                if (j + 1 < toInterval.length() && newSeqOrder2.get(j + 1).isPresent()) {
-                    newSeqOrder2.set(j, Optional.of(newSeqOrder2.get(j + 1).get() - 1));
+        if (oppositeToFounder) {
+            for (int j = toInterval.length() - 1; j > -1; j--) {
+                Optional<Integer> o = newSeqOrder2.get(j);
+                if (!o.isPresent()) {
+                    if (j + 1 < toInterval.length() && newSeqOrder2.get(j + 1).isPresent()) {
+                        newSeqOrder2.set(j, Optional.of(newSeqOrder2.get(j + 1).get() + 1));
+                    }
                 }
             }
-        }
 
-        logger.info("r-l filled newSeqOrder2 {}\n", newSeqOrder2);
+            logger.info("r-l filled newSeqOrder2 {}\n", newSeqOrder2);
 
-        for (int j = 0; j < toInterval.length(); j++) {
-            Optional<Integer> o = newSeqOrder2.get(j);
-            if (!o.isPresent()) {
-                newSeqOrder2.set(j, Optional.of(newSeqOrder2.get(j - 1).get() + 1));
+            for (int j = 0; j < toInterval.length(); j++) {
+                Optional<Integer> o = newSeqOrder2.get(j);
+                if (!o.isPresent()) {
+                    newSeqOrder2.set(j, Optional.of(newSeqOrder2.get(j - 1).get() - 1));
+                }
             }
-        }
+        } else {
+            for (int j = toInterval.length() - 1; j > -1; j--) {
+                Optional<Integer> o = newSeqOrder2.get(j);
+                if (!o.isPresent()) {
+                    if (j + 1 < toInterval.length() && newSeqOrder2.get(j + 1).isPresent()) {
+                        newSeqOrder2.set(j, Optional.of(newSeqOrder2.get(j + 1).get() - 1));
+                    }
+                }
+            }
 
-        System.out.printf("l-r filled newSeqOrder2 %s\n", newSeqOrder2);
+            logger.info("r-l filled newSeqOrder2 {}\n", newSeqOrder2);
+
+            for (int j = 0; j < toInterval.length(); j++) {
+                Optional<Integer> o = newSeqOrder2.get(j);
+                if (!o.isPresent()) {
+                    newSeqOrder2.set(j, Optional.of(newSeqOrder2.get(j - 1).get() + 1));
+                }
+            }
+
+            System.out.printf("l-r filled newSeqOrder2 %s\n", newSeqOrder2);
+        }
         /**/
 
 //        Optional.

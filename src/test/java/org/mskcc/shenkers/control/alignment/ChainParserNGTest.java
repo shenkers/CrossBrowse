@@ -204,12 +204,12 @@ public class ChainParserNGTest {
             
             NucleotideMapping mapping = new NucleotideMapping(melInterval, yakInterval);
             for (LocalAlignment a : chainIntersections) {
-                logger.info("{}:{}-{}", a.fromSequenceName, a.fromStart, a.fromEnd);
-                logger.info("{}:{}-{}", a.toSequenceName, a.toStart, a.toEnd);
+                logger.info("{}:{}-{}", a.fromSequenceName, a.getFromStart(), a.getFromEnd());
+                logger.info("{}:{}-{}", a.toSequenceName, a.getToStart(), a.getToEnd());
                 LocalAlignment trimmed = trim(a, melInterval, yakInterval);
                 mapping.add(trimmed);
             }
-            weaver.add(yakInterval, g1, g2, mapping);
+            weaver.add(yakInterval, g1, g2, false, mapping);
         }
 
         {
@@ -222,11 +222,11 @@ public class ChainParserNGTest {
             logger.info("vir intersections size {}", chainIntersections.size());
             NucleotideMapping mapping = new NucleotideMapping(melInterval, virInterval);
             for (LocalAlignment a : chainIntersections) {
-                logger.info("{}:{}-{}", a.toSequenceName, a.toStart, a.toEnd);
+                logger.info("{}:{}-{}", a.toSequenceName, a.getToStart(), a.getToEnd());
                 LocalAlignment trimmed = trim(a, melInterval, virInterval);
                 mapping.add(trimmed);
             }
-            weaver.add(virInterval, g1, g3, mapping);
+            weaver.add(virInterval, g1, g3, true, mapping);
         }
         
         weaver.printAli2(Arrays.asList(g1,g2,g3));
