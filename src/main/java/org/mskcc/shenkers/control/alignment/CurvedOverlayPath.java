@@ -147,7 +147,7 @@ public class CurvedOverlayPath {
             BooleanProperty flipped = new SimpleBooleanProperty(false);
             genomeFlipped.add(flipped);
             DoubleProperty lower = getRelativeXCoords().get(i).getKey();
-            DoubleProperty upper = getRelativeXCoords().get(i).getKey();
+            DoubleProperty upper = getRelativeXCoords().get(i).getValue();
             componentXCoords.add(new Pair<>(new ComplementBinding(true, flipped, lower, upper).multiply(getXScale()), new ComplementBinding(false, flipped, lower, upper).multiply(getXScale())));
             componentYCoords.add(new Pair<>(getRelativeYCoords().get(i).getKey().multiply(getYScale()), getRelativeYCoords().get(i).getValue().multiply(getYScale())));
         }
