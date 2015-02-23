@@ -5,23 +5,39 @@ import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.DoubleBinding;
+import javafx.beans.binding.ListBinding;
+import javafx.beans.binding.ObjectBinding;
+import javafx.beans.binding.StringExpression;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableDoubleValue;
+import javafx.beans.value.ObservableObjectValue;
 import javafx.beans.value.ObservableValue;
+import javafx.beans.value.ObservableValueBase;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
+import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -41,7 +57,10 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
@@ -67,6 +86,7 @@ import org.mskcc.shenkers.control.track.Track;
 import org.mskcc.shenkers.control.track.TrackCell;
 import org.mskcc.shenkers.control.track.bam.BamContext;
 import org.mskcc.shenkers.control.alignment.AlignmentSource;
+import org.mskcc.shenkers.control.alignment.chain.ChainAlignmentOverlay;
 import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.SimpleTrack;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -80,18 +100,18 @@ public class FXMLController implements Initializable {
     ModelSingleton model = ModelSingleton.getInstance();
 
     @FXML
-    SplitPane split;
-
-    @FXML
     BorderPane histogram;
 
     @FXML
     BorderPane histogram2;
 
-    @FXML
-    ListView<String> lv;
-
     int rowIndex = 0;
+
+    @FXML
+    StackPane info;
+
+    @FXML
+    Pane overlay;
 
     @FXML
     SplitPane genomeSplitPane;
@@ -99,17 +119,11 @@ public class FXMLController implements Initializable {
     @FXML
     Pane alignmentOverlay;
 
-//    @FXML
-//    ListView lv1, lv2, lv3;
-    @FXML
-    Pane canvas;
-
-    @FXML
-    BorderPane stp;
-
     TrackBuilder trackBuilder;
 
     AlignmentLoader alignmentLoader;
+    Optional<ChainAlignmentOverlay> cao;
+    ObjectBinding spanBinding;
 
     @Inject
     private void setAlignmentLoader(AlignmentLoader b) {
@@ -123,28 +137,6 @@ public class FXMLController implements Initializable {
         this.trackBuilder = b;
     }
 
-    @FXML
-    private void handleButtonAction(ActionEvent event) {
-        System.out.println("You clicked me!");
-    }
-
-    @FXML
-    private void handleButtonAction2(ActionEvent event) {
-        System.out.println("You clicked me2!");
-        Label child = new Label("c=0,r=" + rowIndex);
-        Label child2 = new Label("c=1,r=" + rowIndex);
-
-//        gridpane.addRow(rowIndex, child, child2);
-////        gridpane.setConstraints(child, 0, rowIndex, 1, 1, HPos.CENTER, VPos.CENTER, Priority.ALWAYS, Priority.ALWAYS);
-//        gridpane.getRowConstraints().add(new RowConstraints());
-//        gridpane.getRowConstraints().get(rowIndex).setValignment(VPos.TOP);
-//        gridpane.getRowConstraints().get(rowIndex).setVgrow(Priority.ALWAYS);
-        rowIndex++;
-        lv.getItems().add(child2.getText());
-
-        x.set((x.getValue() + 10) % 100);
-
-    }
     SimpleTrack sim;
 
     @FXML
@@ -312,14 +304,19 @@ public class FXMLController implements Initializable {
 
         ValidationSupport validation = new ValidationSupport();
 
+        List<Pair<Genome, Genome>> all_pairs = new ArrayList<>();
         for (int i = 0; i < genomes.size(); i++) {
             Genome g1 = genomes.get(i);
             for (int j = i + 1; j < genomes.size(); j++) {
                 Genome g2 = genomes.get(j);
-
-                ComboBox<Pair<Genome, Genome>> liftPair = new ComboBox<>();
-                liftPair.getItems().addAll(new Pair<>(g1, g2), new Pair<>(g2, g1));
-                liftPair.setConverter(
+                all_pairs.add(new Pair<>(g1, g2));
+                all_pairs.add(new Pair<>(g2, g1));
+            }
+        }
+         for (int i = 0; i < genomes.size()-1; i++) {
+               ComboBox<Pair<Genome, Genome>> liftPair = new ComboBox<>();
+              liftPair.getItems().addAll(all_pairs);
+              liftPair.setConverter(
                         new StringConverter<Pair<Genome, Genome>>() {
 
                             public String toString(Pair<Genome, Genome> object) {
@@ -340,8 +337,8 @@ public class FXMLController implements Initializable {
                 Button button = new Button("Select");
                 selectFiles.add(button);
 
-                validation.registerValidator(liftPair, Validator.createEmptyValidator(String.format("Specify alignment direction for genomes (%s,%s)", g1.getId(), g2.getId())));
-                validation.registerValidator(selectedFile, Validator.createEmptyValidator(String.format("Specify chain for genomes (%s,%s)", g1.getId(), g2.getId())));
+                validation.registerValidator(liftPair, Validator.createEmptyValidator(String.format("Specify alignment direction liftOver file")));
+                validation.registerValidator(selectedFile, Validator.createEmptyValidator(String.format("Specify chain for genomes")));
 
                 button.setOnAction(
                         actionEvent -> {
@@ -355,8 +352,8 @@ public class FXMLController implements Initializable {
                             }
                         }
                 );
-            }
-        }
+         }
+         
         for (int i = 0; i < genomePairs.size(); i++) {
             gp1.addRow(i, genomePairs.get(i), textFields.get(i), selectFiles.get(i));
         }
@@ -386,6 +383,88 @@ public class FXMLController implements Initializable {
                 List<AlignmentSource> alignmentSources = textFields.stream().map(textField -> alignmentLoader.load(textField.getText())).collect(Collectors.toList());
                 List<Pair<Genome, Genome>> selectedPairs = genomePairs.stream().map(comboBox -> comboBox.getSelectionModel().getSelectedItem()).collect(Collectors.toList());
                 model.setAlignments(selectedPairs, alignmentSources);
+                cao = Optional.of(new ChainAlignmentOverlay(model.getAlignments()));
+
+                Runnable r = () -> {
+
+                    overlay.getChildren().clear();
+                    Map<Genome, GenomeSpan> spans = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> model.getSpan(g).getValue().get()));
+
+//                2R:12743706-12747879
+//                2R:16228220-16231888:-
+//                        /home/sol/lailab/sol/genomes/chains/netChainSubset/dm3.droYak3.net.chain
+//                    /home/sol/lailab/sol/mel_yak_vir/total_rna/M/T.bam
+//                    /home/sol/lailab/sol/mel_yak_vir/total_rna/Y/T.bam
+                    //                    /home/sol/lailab/sol/mel_yak_vir/total_rna/V/T.bam
+//                    /home/sol/lailab/sol/genomes/chains/netChainSubset/M.Y.chain
+//                    /home/sol/lailab/sol/genomes/chains/netChainSubset/M.V.chain
+//                    /home/sol/lailab/sol/genomes/chains/netChainSubset/Y.V.chain
+//3R:4892065-4900435
+//3R:8938890-8947395
+//                    scaffold_12855:8568616-8577467
+                    
+                    //3R:4895365-4897435
+//3R:8942090-8944295
+//                    scaffold_12855:8570616-8573467
+                    class flipBinding extends BooleanBinding {
+
+                        ObservableValue<Optional<GenomeSpan>> g;
+
+                        public flipBinding(ObservableValue<Optional<GenomeSpan>> g) {
+                            super.bind(g);
+                            this.g = g;
+                        }
+
+                        @Override
+                        protected boolean computeValue() {
+                            logger.info("recomputing flip binding {} isneg {}", g, g.getValue().get().isNegativeStrand());
+                            return g.getValue().get().isNegativeStrand();
+                        }
+
+                    }
+
+                    Map<Genome, BooleanBinding> flips = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> new flipBinding(model.getSpan(g))));
+                    List<DoubleProperty> dividerPositions = genomeSplitPane.getDividers().stream().map(d -> d.positionProperty()).collect(Collectors.toList());
+
+                    logger.info("spans {}", spans);
+                    logger.info("flips {}", flips);
+                    logger.info("divider {}", dividerPositions);
+
+                    try {
+                        overlay.getChildren().setAll(cao.get().getOverlayPaths(model.getGenomes(), spans, flips, 100, dividerPositions, viewportWidthProperty, genomeSplitPane.heightProperty()));
+                    } catch (Exception e) {
+                        logger.info("caught alignment error");
+                        logger.info("message: ", e);
+                    }
+                };
+
+                r.run();
+
+                ObservableValue[] spanProperties = model.getGenomes().stream().map(g -> model.getSpan(g)).collect(Collectors.toList()).toArray(new ObservableValue[0]);
+
+                class SpanBinding extends ObjectBinding {
+
+                    public SpanBinding(Observable[] dependencies) {
+                        super.bind(dependencies);
+                    }
+
+                    @Override
+                    protected Object computeValue() {
+                        return null;
+                    }
+
+                }
+                spanBinding = new SpanBinding(spanProperties);
+                spanBinding.addListener(new InvalidationListener() {
+
+                    @Override
+                    public void invalidated(Observable observable) {
+                        logger.info("span change detected, updating overlay");
+                        r.run();
+                        spanBinding.get();
+                    }
+                });
+
             }
             if (buttonType.equals(ButtonType.CANCEL)) {
                 logger.info("canceling loading alignments");
@@ -395,6 +474,7 @@ public class FXMLController implements Initializable {
     }
 
     IntegerProperty x = new SimpleIntegerProperty(0);
+    ObservableValue<Double> viewportWidthProperty;
     ObservableList<Node> genomeSplitPaneNodes;
     ListView<String> trackListView;
 
@@ -404,40 +484,34 @@ public class FXMLController implements Initializable {
         trackListView = new ListView<String>();
 
         {
-            LineHistogramView lhv = new LineHistogramView();
-            int max = 300;
-            List<Double> collect = IntStream.range(0, max).mapToDouble(i -> Math.sin((i + 0.) / (max / 10))).boxed().collect(Collectors.toList());
-            double[] data = ArrayUtils.toPrimitive(collect.toArray(new Double[0]));
-
-            for (double d : data) {
-                lhv.addData(d);
-            }
-//            lhv.widthProperty().bind(histogram.widthProperty());
-//            lhv.heightProperty().bind(histogram.heightProperty());
-            lhv.setMin(-1);
-            lhv.setMax(1);
-
-//            histogram.getChildren().add(lhv.getGraphic());
-            split.getItems().add(lhv.getGraphic());
+            overlay.setMouseTransparent(true);
         }
         {
-            LineHistogramView lhv = new LineHistogramView();
-            int max = 300;
-            List<Double> collect = IntStream.range(0, max).mapToDouble(i -> Math.sin((i + 0.) / (max / 10))).boxed().collect(Collectors.toList());
-            double[] data = ArrayUtils.toPrimitive(collect.toArray(new Double[0]));
+            info.setMouseTransparent(true);
 
-            for (double d : data) {
-                lhv.addData(d);
-            }
-//            lhv.widthProperty().bind(histogram2.widthProperty());
-//            lhv.heightProperty().bind(histogram2.heightProperty());
-            lhv.setMin(-1);
-            lhv.setMax(1);
-            lhv.setFlipDomain(true);
-            lhv.setFlipRange(true);
+            Label label = new Label("initialize alignment");
+            label.setOpacity(.2);
+            label.setFont(new Font(15));
+            label.setTextFill(Color.RED);
+            info.getChildren().add(new BorderPane(label));
 
-//            histogram2.getChildren().add(lhv.getGraphic());
-            split.getItems().add(lhv.getGraphic());
+            model.getGenomes().addListener(new ListChangeListener<Genome>() {
+
+                @Override
+                public void onChanged(ListChangeListener.Change<? extends Genome> c) {
+                    StringExpression sp = new SimpleStringProperty("initialize alignment: ");
+
+                    for (Genome g : c.getList()) {
+                        sp = sp.concat(Bindings.format("[ %s %s ]", g, model.getSpan(g)));
+                    }
+                    Label label = new Label();
+                    label.setOpacity(.2);
+                    label.setFont(new Font(15));
+                    label.setTextFill(Color.RED);
+                    label.textProperty().bind(sp);
+                    info.getChildren().setAll(new BorderPane(label));
+                }
+            });
         }
 
         System.out.println("genomes: " + genomes);
@@ -576,7 +650,7 @@ public class FXMLController implements Initializable {
 
                     // bind the size of the content to the dimensions of the viewport of the scroll pane
                     ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
-                    MonadicBinding<Double> viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
+                    viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
                     apply.prefWidthProperty().bind(viewportWidthProperty);
 
                     // only show the vertical scroll pane
@@ -678,8 +752,6 @@ public class FXMLController implements Initializable {
         r.xProperty().bind(x);
         r2.xProperty().bind(x.add(10));
 
-        canvas.getChildren().addAll(r, r2);
-
         Rectangle r3 = new Rectangle(10, 20);
         Rectangle r4 = new Rectangle(30, 40, 10, 20);
         r3.xProperty().bind(x);
@@ -689,7 +761,6 @@ public class FXMLController implements Initializable {
 
         sim = new SimpleTrack();
 //        ModelSingleton.getInstance().genomeSpanProperty().addListener(sim);
-        stp.setCenter(sim);
 
 //        lv1.widthProperty().addListener(
 //                new ChangeListener<Number>() {

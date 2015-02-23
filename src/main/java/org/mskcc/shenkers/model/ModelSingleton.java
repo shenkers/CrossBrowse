@@ -17,6 +17,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.collections.ObservableMap;
 import javafx.scene.Node;
 import javafx.util.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -54,7 +55,7 @@ public class ModelSingleton {
 
     ObservableList<Genome> genomes;
     Map<Genome, ObservableList<Track<AbstractContext>>> tracks;
-    Map<Genome, Property<Optional<GenomeSpan>>> spans;
+    ObservableMap<Genome, Property<Optional<GenomeSpan>>> spans;
     Map<Pair<Genome,Genome>,AlignmentSource> alignments;
 
     private int nTracks;
@@ -67,6 +68,10 @@ public class ModelSingleton {
         for(int i=0; i<genomePairs.size(); i++){
             alignments.put(genomePairs.get(i), alignmentSources.get(i));
         }
+    }
+    
+    public Map<Pair<Genome,Genome>,AlignmentSource> getAlignments(){
+        return alignments;
     }
 
     public void setSpan(Genome g, Optional<GenomeSpan> span) {

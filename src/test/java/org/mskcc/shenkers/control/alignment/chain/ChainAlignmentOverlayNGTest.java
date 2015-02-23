@@ -19,6 +19,8 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.MapChangeListener;
+import javafx.collections.ObservableMap;
 import javafx.embed.swing.JFXPanel;
 import javafx.geometry.Orientation;
 import javafx.scene.Scene;
@@ -86,6 +88,22 @@ public class ChainAlignmentOverlayNGTest extends Application {
 //        launch();
     }
     
+    @Test
+            
+            public void testMap(){
+                
+        ObservableMap<Object, Object> observableHashMap = FXCollections.observableHashMap();
+        observableHashMap.addListener(new MapChangeListener<Object, Object>() {
+
+            @Override
+            public void onChanged(MapChangeListener.Change<? extends Object, ? extends Object> change) {
+         logger.info("map changed");
+            }
+        });
+//        logger.info("contents {}",observableHashMap);
+        observableHashMap.put("a", "b");
+//        logger.info("contents {}",observableHashMap);
+            }
     List<DoubleProperty> dividerPositionProperties;
     
     @Override
@@ -114,18 +132,18 @@ public class ChainAlignmentOverlayNGTest extends Application {
         Genome g2 = new Genome("yak", "yak");
         Genome g3 = new Genome("vir", "vir");
         
-//        GenomeSpan melInterval = new GenomeSpan("3L", 74548, 74869, false);
-//        GenomeSpan yakInterval = new GenomeSpan("3L", 42088, 42438, false);
-//        GenomeSpan virInterval = new GenomeSpan("scaffold_13049", 2917506, 2917933, false);
+        GenomeSpan melInterval = new GenomeSpan("3L", 74548, 74869, false);
+        GenomeSpan yakInterval = new GenomeSpan("3L", 42088, 42438, false);
+        GenomeSpan virInterval = new GenomeSpan("scaffold_13049", 2917506, 2917933, false);
         
 //              GenomeSpan melInterval = new GenomeSpan("3L", 74548, 74554, false);
 //            GenomeSpan yakInterval = new GenomeSpan("3L", 42084, 42097, false);
 //            GenomeSpan melInterval = new GenomeSpan("3L", 74548, 74551, false);
 //            GenomeSpan yakInterval = new GenomeSpan("3L", 42085, 42088, false);
         
-        GenomeSpan melInterval = new GenomeSpan("2R", 12743706, 12747879, false);
-        GenomeSpan yakInterval = new GenomeSpan("2R", 16228220, 16231888, false);
-        GenomeSpan virInterval = new GenomeSpan("scaffold_12875", 10639626, 10643889, false);
+//        GenomeSpan melInterval = new GenomeSpan("2R", 12743706, 12747879, false);
+//        GenomeSpan yakInterval = new GenomeSpan("2R", 16228220, 16231888, false);
+//        GenomeSpan virInterval = new GenomeSpan("scaffold_12875", 10639626, 10643889, false);
         
         
         Map<Genome, GenomeSpan> displayedSpans = new HashMap<>();
@@ -133,7 +151,7 @@ public class ChainAlignmentOverlayNGTest extends Application {
         displayedSpans.put(g2, yakInterval);
             displayedSpans.put(g3, virInterval);
 
-        int basesPerColumn = 50;
+        int basesPerColumn = 100;
         logger.info("constructing alignment sources");
         Map<Pair<Genome, Genome>, AlignmentSource> alignmentSources = new HashMap<>();
         alignmentSources.put(new Pair<>(g1, g2), new ChainAlignmentSource("/home/sol/lailab/sol/genomes/chains/netChainSubset/dm3.droYak3.net.chain"));
@@ -185,16 +203,20 @@ public class ChainAlignmentOverlayNGTest extends Application {
             
             
             CurvedOverlayPath cop = new CurvedOverlayPath(gOrder.size());
+            
             for(int i=0; i<gOrder.size(); i++){
                 cop.getGenomeFlipped().get(i).bind(flips.get(i));
             }
+            
             overlay.getChildren().add(cop.getPath());
             cop.getXScale().bind(stackPane.widthProperty());
             cop.getYScale().bind(stackPane.heightProperty());
 
-                cop.getPath().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
+//            cop.getPath().setF
+                
 //            cop.getPath().setStroke(new Color(0, 0, 0, 0));
-//            cop.getPath().setStrokeWidth(1.);
+//            cop.getPath().setStrokeWidth(3.);
+            cop.getPath().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
             for (int i = 0; i < gOrder.size(); i++) {
                 Genome g = gOrder.get(i);
                 Pair<Double, Double> calculatedRelativeX = column.get(g);
@@ -218,6 +240,7 @@ public class ChainAlignmentOverlayNGTest extends Application {
                     relativeY.getValue().bind(dividerPositionProperties.get(i * 2));
                 }
             }
+            logger.info(cop.getPath().getElements());
             
         }
         

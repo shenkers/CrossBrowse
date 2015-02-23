@@ -21,9 +21,7 @@
                 </MenuBar>
             </top>
             
-            <bottom>
-                <fx:include fx:id="child" source="CoordinateInput.fxml"/>
-            </bottom>
+            
             
             <center>
                 <StackPane>
@@ -31,9 +29,14 @@
                         <SplitPane fx:id="genomeSplitPane" orientation="VERTICAL" >
                     
                         </SplitPane>
-                        <StackPane fx:id="overlay"/>
+                        <Pane fx:id="overlay"/>
+                        <StackPane fx:id="info"/>
                     </children>
                 </StackPane>               
             </center>
+            
+            <bottom>
+                <fx:include fx:id="child" source="CoordinateInput.fxml"/>
+            </bottom>
           
 </BorderPane>

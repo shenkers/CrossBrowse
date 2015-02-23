@@ -17,6 +17,22 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.DoubleBinding;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.value.ObservableDoubleValue;
+import javafx.beans.value.ObservableValue;
+import javafx.geometry.Orientation;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.Label;
+import javafx.scene.control.SplitPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Pane;
+import javafx.scene.layout.StackPane;
+import javafx.scene.paint.Color;
 import javafx.util.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -57,10 +73,16 @@ public class ChainAlignmentOverlay {
         logger.info("Adding alignments from {} to {}", fromGenome, toGenome);
         Set<Boolean> toNegativeStrand = new HashSet<>();
         for (LocalAlignment localAlignment : alignmentSources.get(genomePair).getAlignment(fromInterval, toInterval)) {
+            if(
+                    IntervalTools.overlaps(localAlignment.getFromStart(), localAlignment.getFromEnd(), fromInterval.getStart(), fromInterval.getEnd())
+                    &&
+                    IntervalTools.overlaps(localAlignment.getToStart(), localAlignment.getToEnd(), toInterval.getStart(), toInterval.getEnd())
+                    ){
             logger.info("before trim: {}-{}",localAlignment.getToStart(), localAlignment.getToEnd());
             logger.info("after trim: {}-{}",localAlignment.trim(fromInterval, toInterval).getToStart(), localAlignment.trim(fromInterval, toInterval).getToEnd());
             mappingFromGenomeToGenome.add(localAlignment.trim(fromInterval, toInterval));
             toNegativeStrand.add(localAlignment.getToNegativeStrand());
+            }
         }
         
         assert toNegativeStrand.size()==1 : "Can't represent alignments go to plus and minus strand yet";
@@ -87,11 +109,17 @@ public class ChainAlignmentOverlay {
         logger.info("Adding alignments from {} to {}", fromGenome, toGenome);
          Set<Boolean> toNegativeStrand = new HashSet<>();
        for (LocalAlignment localAlignment : alignmentSources.get(genomePair).getAlignment(fromInterval, toInterval)) {
-               logger.info("before trim to {}: {}-{}", toInterval, localAlignment.getToStart(), localAlignment.getToEnd());
+           if(
+                    IntervalTools.overlaps(localAlignment.getFromStart(), localAlignment.getFromEnd(), fromInterval.getStart(), fromInterval.getEnd())
+                    &&
+                    IntervalTools.overlaps(localAlignment.getToStart(), localAlignment.getToEnd(), toInterval.getStart(), toInterval.getEnd())
+                    ){    
+           logger.info("before trim to {}: {}-{}", toInterval, localAlignment.getToStart(), localAlignment.getToEnd());
             logger.info("after trim: {}-{}",localAlignment.trim(fromInterval, toInterval).getToStart(), localAlignment.trim(fromInterval, toInterval).getToEnd());
          
            mappingFromGenomeToGenome.add(localAlignment.trim(fromInterval, toInterval));
                  toNegativeStrand.add(localAlignment.getToNegativeStrand());
+           }
    }
         assert toNegativeStrand.size()==1 : "Can't represent alignments go to plus and minus strand yet";
         if (alignmentInverted) {
@@ -203,5 +231,69 @@ public class ChainAlignmentOverlay {
         }
 
         return relativeCoordinates;
+    }
+    
+    public List<Node> getOverlayPaths(List<Genome> gOrder, Map<Genome,GenomeSpan> displayedSpans, Map<Genome, BooleanBinding> genomeFlipped, int basesPerColumn, List<DoubleProperty> dividerPositionProperties, ObservableValue<Double> widthProperty, ObservableDoubleValue heightProperty){
+         
+        List<Map<Genome, Pair<Double, Double>>> alignmentColumnsRelativeX = getAlignmentColumnsRelativeX(displayedSpans, basesPerColumn);
+        
+        List<BooleanBinding> flips = gOrder.stream().map(g->genomeFlipped.get(g)).collect(Collectors.toList());
+                
+        List<Node> paths = new ArrayList<>();
+        
+        for (Map<Genome, Pair<Double, Double>> column : alignmentColumnsRelativeX) {
+            logger.info("{}", column);
+            
+            boolean allRowsAligned = true;
+            for (int i = 0; i < gOrder.size(); i++) {
+                Genome g = gOrder.get(i);
+                Pair<Double, Double> calculatedRelativeX = column.get(g);
+                allRowsAligned &= calculatedRelativeX.getValue() - calculatedRelativeX.getKey() > 0;
+            }
+            
+            if(!allRowsAligned)
+                continue;
+            
+            
+            CurvedOverlayPath cop = new CurvedOverlayPath(gOrder.size());
+            for(int i=0; i<gOrder.size(); i++){
+                cop.getGenomeFlipped().get(i).bind(flips.get(i));
+            }
+            
+            paths.add(cop.getPath());
+            
+            cop.getXScale().bind(widthProperty);
+            cop.getYScale().bind(heightProperty);
+
+                cop.getPath().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
+//            cop.getPath().setStroke(new Color(0, 0, 0, 0));
+//            cop.getPath().setStrokeWidth(1.);
+            for (int i = 0; i < gOrder.size(); i++) {
+                Genome g = gOrder.get(i);
+                Pair<Double, Double> calculatedRelativeX = column.get(g);
+                logger.info("adding column {} {}", g, calculatedRelativeX);
+                Pair<DoubleProperty, DoubleProperty> relativeX = cop.getRelativeXCoords().get(i);
+                relativeX.getKey().setValue(calculatedRelativeX.getKey());
+                relativeX.getValue().setValue(calculatedRelativeX.getValue());
+                Pair<DoubleProperty, DoubleProperty> relativeY = cop.getRelativeYCoords().get(i);
+                
+                if (i == 0) {
+                    logger.info("case 1 : {} i={}", g, i);
+                    relativeY.getKey().setValue(0);
+                    relativeY.getValue().bind(dividerPositionProperties.get(0));
+                } else if (i == gOrder.size() - 1) {
+                    logger.info("case 2 : {} i={}", g, i);
+                    relativeY.getKey().bind(dividerPositionProperties.get(dividerPositionProperties.size() - 1));
+                    relativeY.getValue().setValue(1);
+                } else {
+                    logger.info("case 3 : {} i={}", g, i);
+                    relativeY.getKey().bind(dividerPositionProperties.get((i * 2) - 1));
+                    relativeY.getValue().bind(dividerPositionProperties.get(i * 2));
+                }
+            }
+            
+        }
+        
+        return paths;
     }
 }

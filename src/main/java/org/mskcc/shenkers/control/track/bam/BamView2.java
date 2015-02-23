@@ -14,8 +14,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.LockSupport;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.Property;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.concurrent.Task;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -24,8 +28,10 @@ import javafx.scene.layout.Pane;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.fxmisc.easybind.EasyBind;
 import org.mskcc.shenkers.control.track.View;
 import static org.mskcc.shenkers.control.track.bam.BamView1.coverage;
+import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.view.LineHistogramView;
 import org.mskcc.shenkers.view.SparseLineHistogramView;
 
@@ -70,6 +76,7 @@ public class BamView2 implements View<BamContext> {
         String chr;
         int start;
         int end;
+        BooleanBinding flipBinding;
         Semaphore semaphore;
 
         public PaneTask(BamContext context, String chr, int start, int end) {
@@ -135,6 +142,30 @@ public class BamView2 implements View<BamContext> {
 //            double[] data = ArrayUtils.toPrimitive(IntStream.of(cov).mapToDouble(j -> j + 0.).boxed().collect(Collectors.toList()).toArray(new Double[0]));
                 logger.info("setting data");
                 SparseLineHistogramView lhv = new SparseLineHistogramView();
+                
+                
+                class FlipBinding extends BooleanBinding{
+                    private final Property<Optional<GenomeSpan>> span;
+
+                    private FlipBinding(Property<Optional<GenomeSpan>> spanProperty) {
+                        this.span = spanProperty;
+                    }
+
+                    
+                    protected boolean computeValue() {
+                        
+                        if(span.getValue().isPresent()){
+                            return span.getValue().get().isNegativeStrand();
+                        }
+                        else
+                            return false;
+                    }
+                    
+                }
+                
+                flipBinding = new FlipBinding(context.spanProperty());
+                        
+                lhv.flipDomainProperty().bind(flipBinding);
                 lhv.setData(data, end - start + 1, this);
 
                 logger.info("calculating max");
@@ -147,8 +178,8 @@ public class BamView2 implements View<BamContext> {
 
                 return lhv.getGraphic();
             } catch (Throwable t) {
-                logger.info("Thread {} task {} threw exception {}", Thread.currentThread().getName(), this, t.getMessage());
-                
+                logger.info("task {} threw exception {}", this, t.getMessage());
+                logger.info("exception: ",t);
                 throw t;
             }
             finally{

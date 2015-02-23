@@ -55,7 +55,7 @@ public class AlignmentViewNGTest extends Application {
 
     @Test
     public void testSomeMethod() {
-//        launch(new String[0]);
+        launch(new String[0]);
     }
 
     AlignmentOverlay root;
@@ -65,10 +65,15 @@ public class AlignmentViewNGTest extends Application {
     @Override
     public void start(Stage stage) throws Exception {
         // TODO review the generated test code and remove the default call to fail.
-        String[] alignment = new String[]{
-            "XX-X--XXXX-X---XX-----",
-            "--XXXXXXXXX-XXXXXXXXXX",
-            "XXX---XXX-XXXXXXXX-XXX",};
+        List<String> sl = new ArrayList<>();
+                for(int i=0; i<9; i++){
+                    String s = "";
+                    for(int j=0; j<99; j++){
+                        s = s+(Math.random()<.4?"X":"-");
+                    }
+                    sl.add(s);
+                }
+        String[] alignment = sl.toArray(new String[0]);
 
         int numColumns = alignment[0].length();
         int numRows = alignment.length;
@@ -80,16 +85,18 @@ public class AlignmentViewNGTest extends Application {
             startIndex[i] = 0;
             endIndex[i] = 0;
         }
-        int b = 1;
+        int b = 3;
 
         SplitPane sp = new SplitPane();
-        sp.getItems().addAll(
-                new BorderPane(new Label("a")),
-                new BorderPane(new Label("b")),
-                new BorderPane(new Label("c")),
-                new BorderPane(new Label("d")),
-                new BorderPane(new Label("e"))
-        );
+        for(int i=0; i<sl.size()+sl.size()-1; i++)
+            sp.getItems().add(new BorderPane());
+//        sp.getItems().addAll(
+//                new BorderPane(new Label("a")),
+//                new BorderPane(new Label("b")),
+//                new BorderPane(new Label("c")),
+//                new BorderPane(new Label("d")),
+//                new BorderPane(new Label("e"))
+//        );
         sp.setOrientation(Orientation.VERTICAL);
 
         root = new AlignmentOverlay();
@@ -104,7 +111,7 @@ public class AlignmentViewNGTest extends Application {
 
             if ((i + 1) % b == 0) {
 
-                BoundPoly4 bp4 = new AlignmentOverlayNGTest.BoundPoly4(3);
+                BoundPoly4 bp4 = new AlignmentOverlayNGTest.BoundPoly4(numRows);
                 List<Double> xCoords = new ArrayList<>();
                 for (int j = 0; j < numRows; j++) {
 //                    System.out.println(Arrays.asList(startIndex[j], endIndex[j]));
@@ -121,36 +128,38 @@ public class AlignmentViewNGTest extends Application {
                 System.err.println("xcoords size " + xCoords.size());
                 BoundPoly3 bp = new BoundPoly3(xCoords);
                 bp.ypos.get(0).setValue(0);
-                bp.ypos.get(5).setValue(1.);
+                bp.ypos.get((2*sl.size())-1).setValue(1.);
                 for (int k = 0; k < 4; k++) {
                     bp.ypos.get(k + 1).bind(sp.getDividers().get(k).positionProperty());
                 }
                 for (int j = 0; j < numRows; j++) {
                     Pair<DoubleProperty, DoubleProperty> pair = bp4.relativeYCoords.get(j);
-                    if (j == 0) {
-                        pair.getValue().bind(sp.getDividers().get(0).positionProperty());
-                    } else if (j == numRows - 1) {
-                        pair.getKey().bind(sp.getDividers().get(numRows).positionProperty());
-                        pair.getValue().setValue(1.);
 
-                    } else {
-                        pair.getKey().bind(sp.getDividers().get((2 * j) - 1).positionProperty());
-                        pair.getValue().bind(sp.getDividers().get(2 * j).positionProperty());
-                    }
+                    if (j == 0) {
+                    pair.getKey().setValue(0);
+                    pair.getValue().bind(sp.getDividers().get(0).positionProperty());
+                } else if (j == numRows - 1) {
+                    pair.getKey().bind(sp.getDividers().get(sp.getDividers().size() - 1).positionProperty());
+                    pair.getValue().setValue(1);
+                } else {
+                    pair.getKey().bind(sp.getDividers().get((j * 2) - 1).positionProperty());
+                    pair.getValue().bind(sp.getDividers().get(j * 2).positionProperty());
+                }
                 }
 
                 bp.flips.get(0).set(true);
                 bp.flips.get(bp.flips.size() - 1).set(true);
 //                bp.flips.get(1).set(true);
 //                bp.flips.get(2).set(true);
-                bp.getPoly().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
-                bp.getPoly().setStroke(new Color(0, 0, 0, 1));
+                bp.getPoly().setFill(new Color(Math.random(), Math.random(), Math.random(), 1.0));
+//                bp.getPoly().setStroke(new Color(0, 0, 0, 1));
                 bp.xScale.bind(bor.widthProperty());
                 bp.yScale.bind(bor.heightProperty());
                 bp4.xScale.bind(bor.widthProperty());
                 bp4.yScale.bind(bor.heightProperty());
-                bp4.getPath().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
-                bp4.getPath().setStroke(new Color(0, 0, 0, 1));
+                Color c = new Color(0, Math.random(), Math.random(), 1.0);
+                bp4.getPath().setFill(c);
+                bp4.getPath().setStroke(new Color(1, 1, 1, 1.0));
                 
                 
 
