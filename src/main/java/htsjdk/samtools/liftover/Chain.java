@@ -340,7 +340,7 @@ class Chain {
      * @param chainFile For error messages only.
      * @return New Chain with associated ContinuousBlocks.
      */
-    private static Chain loadChain(final BufferedLineReader reader, final String chainFile) {
+    public static Chain loadChain(final BufferedLineReader reader, final String chainFile) {
         String line = reader.readLine();
         if (line == null) {
             return null;
