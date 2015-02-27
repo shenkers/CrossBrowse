@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Collectors;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -68,7 +69,7 @@ public class IntervalViewNGTest {
     public void tearDownMethod() throws Exception {
     }
 
-    @Test
+//    @Test
     public void testRangeSetIntervalView() throws InterruptedException {
         System.out.println("testIntervalView");
 
@@ -113,7 +114,7 @@ public class IntervalViewNGTest {
         Thread.sleep(1000);
     }
 
-    @Test
+//    @Test
     public void testIntervalView() throws InterruptedException {
         System.out.println("testIntervalView");
         Pane p = new Pane();
@@ -160,8 +161,61 @@ public class IntervalViewNGTest {
         l.await();
         Thread.sleep(1000);
     }
+    
+     @Test
+    public void testGenericStackedIntervalView() throws InterruptedException {
+        List<Pair<Integer,Integer>> intervals = Arrays.asList(
+                new Pair(0, 1),
+                new Pair(1, 2),
+                new Pair(2, 3),
+                new Pair(3, 4),
+                new Pair(4, 5),
+                new Pair(5, 6)
+        );
+        List<Pane> nodes = intervals.stream().map(i->new RectangleIntervalNode()).collect(Collectors.toList());
+        GenericStackedIntervalView p = new GenericStackedIntervalView(0, 6);
+        p.setData(intervals,nodes);
+        
+        ScrollPane sp = new ScrollPane(p);
+        ScrollBar sb = new ScrollBar();
+        sb.maxProperty().bind(sp.vmaxProperty());
+        sb.minProperty().bind(sp.vminProperty());
+        sb.visibleAmountProperty().bind(sp.heightProperty().divide(p.prefHeightProperty()));
+        sb.setOrientation(Orientation.VERTICAL);
+        sp.vvalueProperty().bindBidirectional(sb.valueProperty());
+        HiddenSidesPane hsp = new HiddenSidesPane();
+        hsp.setContent(sp);
+        hsp.setRight(sb);
+        sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        p.setOrientation(Orientation.VERTICAL);
+        p.prefTileHeightProperty().bind(new SimpleDoubleProperty(40));
+//        p.minHeightProperty().bind(new SimpleDoubleProperty(20).multiply(Bindings.size(p.getChildren())));
+        p.prefTileWidthProperty().bind(sp.widthProperty());
+        p.prefHeightProperty().bind(new SimpleDoubleProperty(50).multiply(Bindings.size(p.getChildren())).subtract(10));
+        p.prefWidthProperty().bind(sp.widthProperty());
+        sp.setPadding(Insets.EMPTY);
+        p.setVgap(10);
 
-    @Test
+        CountDownLatch l = new CountDownLatch(1);
+        Platform.runLater(
+                () -> {
+
+                    Stage stage = new Stage();
+                    stage.setOnHidden(e -> {
+                        l.countDown();
+                    });
+                    Scene scene = new Scene(hsp, 300, 300, Color.GRAY);
+                    stage.setTitle("GenericStackedPaneTest");
+                    stage.setScene(scene);
+                    stage.show();
+
+                }
+        );
+        l.await();
+    }
+
+//    @Test
     public void testStackedIntervalView() throws InterruptedException {
         StackedIntervalView p = new StackedIntervalView(0, 6);
         p.setData(Arrays.asList(
@@ -214,7 +268,7 @@ public class IntervalViewNGTest {
         l.await();
     }
 
-    @Test
+//    @Test
     public void testStackIntervalView() throws InterruptedException {
         System.out.println("testStackIntervalView");
         int[][] d = new int[][]{

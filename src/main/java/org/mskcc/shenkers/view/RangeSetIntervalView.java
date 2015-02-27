@@ -77,8 +77,8 @@ public class RangeSetIntervalView extends Pane {
        
         for (Pair<Integer, Integer> interval : intervals) {
             ranges.add(Range.closed(
-                    (interval.getKey() - min - 1.) / length,
-                    (interval.getValue() - min + 0.) / length));
+                    (interval.getKey() - min + 0.) / length,
+                    (interval.getValue() - min + 1.) / length));
         }
 
         List<Node> content = new ArrayList<>();
