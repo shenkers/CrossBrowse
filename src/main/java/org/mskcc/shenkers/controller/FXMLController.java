@@ -87,6 +87,8 @@ import org.mskcc.shenkers.control.track.TrackCell;
 import org.mskcc.shenkers.control.track.bam.BamContext;
 import org.mskcc.shenkers.control.alignment.AlignmentSource;
 import org.mskcc.shenkers.control.alignment.chain.ChainAlignmentOverlay;
+import org.mskcc.shenkers.control.track.bigwig.BigWigContext;
+import org.mskcc.shenkers.control.track.gene.GeneModelContext;
 import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.SimpleTrack;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -97,7 +99,7 @@ public class FXMLController implements Initializable {
 
     private static final Logger logger = LogManager.getLogger();
 
-    ModelSingleton model = ModelSingleton.getInstance();
+    ModelSingleton model;
 
     @FXML
     BorderPane histogram;
@@ -124,6 +126,12 @@ public class FXMLController implements Initializable {
     AlignmentLoader alignmentLoader;
     Optional<ChainAlignmentOverlay> cao;
     ObjectBinding spanBinding;
+
+    @Inject
+    private void setModel(ModelSingleton model) {
+        logger.info("injecting model");
+        this.model = model;
+    }
 
     @Inject
     private void setAlignmentLoader(AlignmentLoader b) {
@@ -205,7 +213,7 @@ public class FXMLController implements Initializable {
         System.out.println("loading track...");
 
         GridPane gp1 = new GridPane();
-        gp1.add(new Label("Track file (BAM,BigWig)"), 0, 0);
+        gp1.add(new Label("Track file (BAM)"), 0, 0);
         Button selectFile = new Button("Select File");
         TextField selectedFile = new TextField("");
         gp1.add(selectedFile, 1, 0);
@@ -213,10 +221,14 @@ public class FXMLController implements Initializable {
         selectFile.setOnAction(
                 actionEvent -> {
                     FileChooser fc = new FileChooser();
+                    if (lastDir != null) {
+                        fc.setInitialDirectory(lastDir);
+                    }
                     Stage s = new Stage();
                     fc.setTitle("Select a fasta reference sequence");
                     File selection = fc.showOpenDialog(s);
                     if (selection != null) {
+                        lastDir = selection.isDirectory() ? selection : selection.getParentFile();
                         System.out.println(selection.getAbsolutePath());
                         selectedFile.setText(selection.getAbsolutePath());
                     }
@@ -291,6 +303,199 @@ public class FXMLController implements Initializable {
         });
     }
 
+    File lastDir;
+
+    @FXML
+    private void loadBigWigTrack(ActionEvent event) {
+        logger.info("Loading track...");
+        System.out.println("loading track...");
+
+        GridPane gp1 = new GridPane();
+        gp1.add(new Label("Track file (BigWig)"), 0, 0);
+        Button selectFile = new Button("Select File");
+        TextField selectedFile = new TextField("");
+        gp1.add(selectedFile, 1, 0);
+        gp1.add(selectFile, 2, 0);
+        selectFile.setOnAction(
+                actionEvent -> {
+                    FileChooser fc = new FileChooser();
+                    if (lastDir != null) {
+                        fc.setInitialDirectory(lastDir);
+                    }
+                    Stage s = new Stage();
+                    fc.setTitle("Select a fasta reference sequence");
+                    File selection = fc.showOpenDialog(s);
+                    if (selection != null) {
+                        lastDir = selection.isDirectory() ? selection : selection.getParentFile();
+                        System.out.println(selection.getAbsolutePath());
+                        selectedFile.setText(selection.getAbsolutePath());
+                    }
+                }
+        );
+
+        gp1.add(new Label("Reference sequence ID"), 0, 1);
+
+        ObservableList<Genome> genomes = model.getGenomes();
+//                = FXCollections.observableArrayList(
+//                        new Genome("dm3", "melanogaster"),
+//                        new Genome("dya", "yakuba")
+//                );
+
+        ComboBox<Genome> genomeSelector = new ComboBox<>(genomes);
+
+        genomeSelector.setConverter(
+                new StringConverter<Genome>() {
+
+                    public String toString(Genome object) {
+                        return object.getId();
+                    }
+
+                    @Override
+                    public Genome fromString(String string) {
+                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+                }
+        );
+
+        gp1.add(genomeSelector, 1, 1);
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Load track");
+        alert.setHeaderText("Configure new track");
+        alert.getDialogPane().setContent(gp1);
+
+//        ButtonType loginButtonType = new ButtonType("Create genome", ButtonData.FINISH);
+//        alert.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
+//
+//        ((Button)alert.getDialogPane().lookupButton(ButtonData.OK_DONE)).setText("Create genome");
+        alert.showAndWait().ifPresent(buttonType -> {
+            System.err.println(buttonType);
+            System.err.println(buttonType.getText());
+            if (buttonType.equals(ButtonType.OK)) {
+                System.err.println("finished");
+//                Track t = new Track() {
+//                    public String getName() {
+//                        return selectedFile.getText();
+//                    }
+//                };
+
+                Track<BigWigContext> t = trackBuilder.load(FileType.WIG, selectedFile.getText());
+
+                Genome selectedGenome = genomeSelector.getSelectionModel().getSelectedItem();
+
+                // bind the span property of this track to the model
+                t.getSpan().bind(model.getSpan(selectedGenome));
+
+                t.getSpan().addListener(new ChangeListener<Optional<GenomeSpan>>() {
+                    public void changed(ObservableValue<? extends Optional<GenomeSpan>> observable, Optional<GenomeSpan> oldValue, Optional<GenomeSpan> newValue) {
+                        logger.info("span change detected in track " + t);
+                    }
+                });
+
+                model.addTrack(selectedGenome, t);
+
+            }
+            if (buttonType.equals(ButtonType.CANCEL)) {
+                System.err.println("Canceled");
+            }
+        });
+    }
+    
+    @FXML
+    private void loadGtfGeneTrack(ActionEvent event) {
+        logger.info("Loading track...");
+       
+        GridPane gp1 = new GridPane();
+        gp1.add(new Label("Track file (GTF)"), 0, 0);
+        Button selectFile = new Button("Select File");
+        TextField selectedFile = new TextField("");
+        gp1.add(selectedFile, 1, 0);
+        gp1.add(selectFile, 2, 0);
+        selectFile.setOnAction(
+                actionEvent -> {
+                    FileChooser fc = new FileChooser();
+                    if (lastDir != null) {
+                        fc.setInitialDirectory(lastDir);
+                    }
+                    Stage s = new Stage();
+                    fc.setTitle("Load GTF gene model file");
+                    File selection = fc.showOpenDialog(s);
+                    if (selection != null) {
+                        lastDir = selection.isDirectory() ? selection : selection.getParentFile();
+                        System.out.println(selection.getAbsolutePath());
+                        selectedFile.setText(selection.getAbsolutePath());
+                    }
+                }
+        );
+
+        gp1.add(new Label("Reference sequence ID"), 0, 1);
+
+        ObservableList<Genome> genomes = model.getGenomes();
+//                = FXCollections.observableArrayList(
+//                        new Genome("dm3", "melanogaster"),
+//                        new Genome("dya", "yakuba")
+//                );
+
+        ComboBox<Genome> genomeSelector = new ComboBox<>(genomes);
+
+        genomeSelector.setConverter(
+                new StringConverter<Genome>() {
+
+                    public String toString(Genome object) {
+                        return object.getId();
+                    }
+
+                    @Override
+                    public Genome fromString(String string) {
+                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+                }
+        );
+
+        gp1.add(genomeSelector, 1, 1);
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Load track");
+        alert.setHeaderText("Configure new track");
+        alert.getDialogPane().setContent(gp1);
+
+//        ButtonType loginButtonType = new ButtonType("Create genome", ButtonData.FINISH);
+//        alert.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
+//
+//        ((Button)alert.getDialogPane().lookupButton(ButtonData.OK_DONE)).setText("Create genome");
+        alert.showAndWait().ifPresent(buttonType -> {
+            System.err.println(buttonType);
+            System.err.println(buttonType.getText());
+            if (buttonType.equals(ButtonType.OK)) {
+                System.err.println("finished");
+//                Track t = new Track() {
+//                    public String getName() {
+//                        return selectedFile.getText();
+//                    }
+//                };
+
+                Track<GeneModelContext> t = trackBuilder.load(FileType.GTF, selectedFile.getText());
+
+                Genome selectedGenome = genomeSelector.getSelectionModel().getSelectedItem();
+
+                // bind the span property of this track to the model
+                t.getSpan().bind(model.getSpan(selectedGenome));
+
+                t.getSpan().addListener(new ChangeListener<Optional<GenomeSpan>>() {
+                    public void changed(ObservableValue<? extends Optional<GenomeSpan>> observable, Optional<GenomeSpan> oldValue, Optional<GenomeSpan> newValue) {
+                        logger.info("span change detected in track " + t);
+                    }
+                });
+
+                model.addTrack(selectedGenome, t);
+
+            }
+            if (buttonType.equals(ButtonType.CANCEL)) {
+                System.err.println("Canceled");
+            }
+        });
+    }
+
     @FXML
     private void loadChainAlignment(ActionEvent event) {
         logger.info("loading alignments");
@@ -313,47 +518,47 @@ public class FXMLController implements Initializable {
                 all_pairs.add(new Pair<>(g2, g1));
             }
         }
-         for (int i = 0; i < genomes.size()-1; i++) {
-               ComboBox<Pair<Genome, Genome>> liftPair = new ComboBox<>();
-              liftPair.getItems().addAll(all_pairs);
-              liftPair.setConverter(
-                        new StringConverter<Pair<Genome, Genome>>() {
+        for (int i = 0; i < genomes.size() - 1; i++) {
+            ComboBox<Pair<Genome, Genome>> liftPair = new ComboBox<>();
+            liftPair.getItems().addAll(all_pairs);
+            liftPair.setConverter(
+                    new StringConverter<Pair<Genome, Genome>>() {
 
-                            public String toString(Pair<Genome, Genome> object) {
-                                return String.format("%s -> %s", object.getKey().getId(), object.getValue().getId());
-                            }
-
-                            @Override
-                            public Pair<Genome, Genome> fromString(String string) {
-                                throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-                            }
+                        public String toString(Pair<Genome, Genome> object) {
+                            return String.format("%s -> %s", object.getKey().getId(), object.getValue().getId());
                         }
-                );
 
-                genomePairs.add(liftPair);
-
-                TextField selectedFile = new TextField("");
-                textFields.add(selectedFile);
-                Button button = new Button("Select");
-                selectFiles.add(button);
-
-                validation.registerValidator(liftPair, Validator.createEmptyValidator(String.format("Specify alignment direction liftOver file")));
-                validation.registerValidator(selectedFile, Validator.createEmptyValidator(String.format("Specify chain for genomes")));
-
-                button.setOnAction(
-                        actionEvent -> {
-                            FileChooser fc = new FileChooser();
-                            Stage s = new Stage();
-                            fc.setTitle("Select a fasta reference sequence");
-                            File selection = fc.showOpenDialog(s);
-                            if (selection != null) {
-                                logger.info("Selected alignment file: " + selection.getAbsolutePath());
-                                selectedFile.setText(selection.getAbsolutePath());
-                            }
+                        @Override
+                        public Pair<Genome, Genome> fromString(String string) {
+                            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
                         }
-                );
-         }
-         
+                    }
+            );
+
+            genomePairs.add(liftPair);
+
+            TextField selectedFile = new TextField("");
+            textFields.add(selectedFile);
+            Button button = new Button("Select");
+            selectFiles.add(button);
+
+            validation.registerValidator(liftPair, Validator.createEmptyValidator(String.format("Specify alignment direction liftOver file")));
+            validation.registerValidator(selectedFile, Validator.createEmptyValidator(String.format("Specify chain for genomes")));
+
+            button.setOnAction(
+                    actionEvent -> {
+                        FileChooser fc = new FileChooser();
+                        Stage s = new Stage();
+                        fc.setTitle("Select a fasta reference sequence");
+                        File selection = fc.showOpenDialog(s);
+                        if (selection != null) {
+                            logger.info("Selected alignment file: " + selection.getAbsolutePath());
+                            selectedFile.setText(selection.getAbsolutePath());
+                        }
+                    }
+            );
+        }
+
         for (int i = 0; i < genomePairs.size(); i++) {
             gp1.addRow(i, genomePairs.get(i), textFields.get(i), selectFiles.get(i));
         }
@@ -387,7 +592,12 @@ public class FXMLController implements Initializable {
 
                 Runnable r = () -> {
 
+                    // TODO check if all spans are set, otherwise need to pass.
                     overlay.getChildren().clear();
+                    logger.info("checking if all spans set");
+                    boolean allSpansSet = model.getGenomes().stream().allMatch(g -> model.getSpan(g).getValue().isPresent());
+                    if(allSpansSet){
+                        logger.info("all spans set, building alignment component");
                     Map<Genome, GenomeSpan> spans = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> model.getSpan(g).getValue().get()));
 
 //                2R:12743706-12747879
@@ -402,11 +612,10 @@ public class FXMLController implements Initializable {
 //3R:4892065-4900435
 //3R:8938890-8947395
 //                    scaffold_12855:8568616-8577467
-                    
                     //3R:4895365-4897435
 //3R:8942090-8944295
 //                    scaffold_12855:8570616-8573467
-                    class flipBinding extends BooleanBinding {
+                    class flipBinding extends BooleanBinding implements ObservableValue<Boolean>{
 
                         ObservableValue<Optional<GenomeSpan>> g;
 
@@ -423,7 +632,7 @@ public class FXMLController implements Initializable {
 
                     }
 
-                    Map<Genome, BooleanBinding> flips = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> new flipBinding(model.getSpan(g))));
+                    Map<Genome, ObservableValue<? extends Boolean>> flips = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> new flipBinding(model.getSpan(g))));
                     List<DoubleProperty> dividerPositions = genomeSplitPane.getDividers().stream().map(d -> d.positionProperty()).collect(Collectors.toList());
 
                     logger.info("spans {}", spans);
@@ -435,6 +644,10 @@ public class FXMLController implements Initializable {
                     } catch (Exception e) {
                         logger.info("caught alignment error");
                         logger.info("message: ", e);
+                    }
+                    }
+                    else{
+                        logger.info("not all spans set, not building alignment");
                     }
                 };
 
@@ -681,14 +894,14 @@ public class FXMLController implements Initializable {
                     }
 //                    genomeSplitPaneNodes.add(f.apply(genomes.get(i)));
                     Genome g = genomes.get(i);
-                    ListView<Track<AbstractContext>> apply = createListView.apply(g);
-                    apply.fixedCellSizeProperty().setValue(100);
+                    ListView<Track<AbstractContext>> trackListView = createListView.apply(g);
+                    trackListView.fixedCellSizeProperty().setValue(100);
 
-                    ScrollPane sp = new ScrollPane(apply);
+                    ScrollPane sp = new ScrollPane(trackListView);
 
                     ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
                     MonadicBinding<Double> viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
-                    apply.prefWidthProperty().bind(viewportWidthProperty);
+                    trackListView.prefWidthProperty().bind(viewportWidthProperty);
 
                     sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
                     sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
