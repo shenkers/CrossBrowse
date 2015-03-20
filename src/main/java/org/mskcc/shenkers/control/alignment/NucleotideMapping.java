@@ -105,11 +105,11 @@ public class NucleotideMapping {
             int toGenomeOffset = alignment.toNegativeStrand ? toBlock.getValue() : toBlock.getKey();
             int toInc = alignment.toNegativeStrand ? -1 : 1;
             for (int fromGenomeOffset = fromBlock.getKey(); fromGenomeOffset <= fromBlock.getValue(); fromGenomeOffset++, toGenomeOffset += toInc) {
-                logger.info("{} <-> {}", fromGenomeOffset, toGenomeOffset);
+//                logger.info("{} <-> {}", fromGenomeOffset, toGenomeOffset);
                 int fromRelativeIndex = fromGenomeOffset - fromInterval.getStart();
                 int toRelativeIndex = toGenomeOffset - toInterval.getStart();
 
-                logger.info("{} <-> {}\n", fromRelativeIndex, toRelativeIndex);
+//                logger.info("{} <-> {}\n", fromRelativeIndex, toRelativeIndex);
 
                 fromAbsoluteOffset.set(fromRelativeIndex, Optional.of(toGenomeOffset));
                 fromRelativeOffset.set(fromRelativeIndex, Optional.of(toRelativeIndex));

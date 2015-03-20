@@ -24,6 +24,7 @@ import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.Property;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
@@ -94,6 +95,7 @@ import org.mskcc.shenkers.model.SimpleTrack;
 import org.mskcc.shenkers.model.datatypes.Genome;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.view.LineHistogramView;
+import org.mskcc.shenkers.view.VerticalHiddenScrollPane;
 
 public class FXMLController implements Initializable {
 
@@ -687,7 +689,7 @@ public class FXMLController implements Initializable {
     }
 
     IntegerProperty x = new SimpleIntegerProperty(0);
-    ObservableValue<Double> viewportWidthProperty;
+    ReadOnlyDoubleProperty viewportWidthProperty;
     ObservableList<Node> genomeSplitPaneNodes;
     ListView<String> trackListView;
 
@@ -758,13 +760,7 @@ public class FXMLController implements Initializable {
          }
          }
          */
-        genomeSplitPaneNodes = EasyBind.map(model.getGenomes(),
-                (Genome g) -> {
-                    String text = String.format("%s:%s", g.getId(), g.getDescription());
-                    System.out.println(text);
-                    return new BorderPane(new Label(text));
-//                        return text;
-                });
+        
 
         Function<Genome, Node> f = (Genome g) -> {
             String text = String.format("%s:%s", g.getId(), g.getDescription());
@@ -783,6 +779,7 @@ public class FXMLController implements Initializable {
         };
 
         genomeSplitPaneNodes = FXCollections.observableArrayList();
+        viewportWidthProperty = genomeSplitPane.widthProperty();
 
         // listen for changes in the set of genomes and update the list of nodes to be 
         // displayed in the split pane
@@ -856,56 +853,29 @@ public class FXMLController implements Initializable {
 
                 if (genomes.size() > 0) {
                     Genome g = genomes.get(0);
-                    ListView<Track<AbstractContext>> apply = createListView.apply(g);
-                    apply.fixedCellSizeProperty().setValue(100);
+                    ListView<Track<AbstractContext>> trackListView = createListView.apply(g);
+                    trackListView.fixedCellSizeProperty().setValue(100);
 
-                    ScrollPane sp = new ScrollPane(apply);
-
-                    // bind the size of the content to the dimensions of the viewport of the scroll pane
-                    ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
-                    viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
-                    apply.prefWidthProperty().bind(viewportWidthProperty);
-
-                    // only show the vertical scroll pane
-                    sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-                    sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-//             TODO       apply.setPrefHeight((apply.getItems().size()+1)*apply.fixedCellSizeProperty().getValue());
-
-                    genomeSplitPaneNodes.add(sp);
+                    VerticalHiddenScrollPane vhsp = new VerticalHiddenScrollPane();
+                    vhsp.build(trackListView);
+                    
+                    genomeSplitPaneNodes.add(vhsp);
                 }
                 for (int i = 1; i < genomes.size(); i++) {
                     // add a track to represent the alignment between sequential genomes
                     {
                         BorderPane apply = f2.apply(f3.apply(genomes.get(i - 1)) + " aligned to " + f3.apply(genomes.get(i)));
-                        ScrollPane sp = new ScrollPane(apply);
-
-                        // bind the size of the content to the dimensions of the viewport of the scroll pane
-                        sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-                        sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-
-                        ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
-                        MonadicBinding<Double> viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
-                        MonadicBinding<Double> viewportHeightProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getHeight());
-                        apply.prefWidthProperty().bind(viewportWidthProperty);
-                        apply.prefHeightProperty().bind(viewportHeightProperty);
-
-//                        sp.getStyleClass().add("alignment-scroll-pane");
-                        genomeSplitPaneNodes.add(sp);
+                        genomeSplitPaneNodes.add(apply);
                     }
 //                    genomeSplitPaneNodes.add(f.apply(genomes.get(i)));
                     Genome g = genomes.get(i);
                     ListView<Track<AbstractContext>> trackListView = createListView.apply(g);
                     trackListView.fixedCellSizeProperty().setValue(100);
-
-                    ScrollPane sp = new ScrollPane(trackListView);
-
-                    ObjectProperty<Bounds> viewportBoundsProperty = sp.viewportBoundsProperty();
-                    MonadicBinding<Double> viewportWidthProperty = EasyBind.map(viewportBoundsProperty, (Bounds b) -> b.getWidth());
-                    trackListView.prefWidthProperty().bind(viewportWidthProperty);
-
-                    sp.setVbarPolicy(ScrollPane.ScrollBarPolicy.ALWAYS);
-                    sp.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-                    genomeSplitPaneNodes.add(sp);
+                    
+                    VerticalHiddenScrollPane vhsp = new VerticalHiddenScrollPane();
+                    vhsp.build(trackListView);
+                    
+                    genomeSplitPaneNodes.add(vhsp);
                 }
             }
         });

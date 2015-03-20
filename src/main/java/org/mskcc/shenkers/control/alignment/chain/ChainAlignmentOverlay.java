@@ -21,6 +21,7 @@ import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableDoubleValue;
 import javafx.beans.value.ObservableValue;
@@ -346,7 +347,7 @@ public class ChainAlignmentOverlay {
         return new ArrayList<>();
     }
 
-    public List<Node> getOverlayPaths(List<Genome> gOrder, Map<Genome, GenomeSpan> displayedSpans, Map<Genome, ObservableValue<? extends Boolean>> genomeFlipped, int basesPerColumn, List<DoubleProperty> dividerPositionProperties, ObservableValue<Double> widthProperty, ObservableDoubleValue heightProperty) {
+    public List<Node> getOverlayPaths(List<Genome> gOrder, Map<Genome, GenomeSpan> displayedSpans, Map<Genome, ObservableValue<? extends Boolean>> genomeFlipped, int basesPerColumn, List<DoubleProperty> dividerPositionProperties, ReadOnlyDoubleProperty widthProperty, ObservableDoubleValue heightProperty) {
 
         List<Map<Genome, Pair<Double, Double>>> alignmentColumnsRelativeX = getAlignmentColumnsRelativeX(displayedSpans, basesPerColumn);
 
