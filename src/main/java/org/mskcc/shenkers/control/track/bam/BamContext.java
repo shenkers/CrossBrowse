@@ -28,8 +28,8 @@ public class BamContext extends AbstractContext{
         readerSemaphore = new Semaphore(1);
     }
     
-    public void acquireReader() throws InterruptedException{
-        readerSemaphore.acquire();
+    public boolean acquireReader() throws InterruptedException{
+        return readerSemaphore.tryAcquire();
     }
     
     public void releaseReader(){

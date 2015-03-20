@@ -61,7 +61,7 @@ public class BamView2 implements View<BamContext> {
 
                     @Override
                     protected Pane call() throws Exception {
-                        return new BorderPane(new Label("bamview2: span not set"));
+                        return new BorderPane(new Label("coordinates not set"));
                     }
                 }
         //                new BorderPane(new Label("bamview1: span not set"))
@@ -90,7 +90,7 @@ public class BamView2 implements View<BamContext> {
 
         @Override
         protected Pane call() throws Exception {
-            SAMRecordIterator sri=null;
+            SAMRecordIterator sri = null;
             try {
                 logger.info("calculating coverage for region {}:{}-{}", chr, start, end);
 
@@ -98,7 +98,10 @@ public class BamView2 implements View<BamContext> {
                 Map<Integer, Double> data = new HashMap<>();
 
                 logger.info("acquiring semaphore for sam reader");
-                context.acquireReader();
+                while (!context.acquireReader()) {
+                    logger.info("waiting...");
+                    Thread.yield();
+                }
                 logger.info("parsing sam file");
                 sri = SAMReader.query(chr, start, end, false);
 
@@ -137,34 +140,31 @@ public class BamView2 implements View<BamContext> {
                     }
                 }
 
-                
-
 //            double[] data = ArrayUtils.toPrimitive(IntStream.of(cov).mapToDouble(j -> j + 0.).boxed().collect(Collectors.toList()).toArray(new Double[0]));
                 logger.info("setting data");
                 SparseLineHistogramView lhv = new SparseLineHistogramView();
-                
-                
-                class FlipBinding extends BooleanBinding{
+
+                class FlipBinding extends BooleanBinding {
+
                     private final Property<Optional<GenomeSpan>> span;
 
                     private FlipBinding(Property<Optional<GenomeSpan>> spanProperty) {
                         this.span = spanProperty;
                     }
 
-                    
                     protected boolean computeValue() {
-                        
-                        if(span.getValue().isPresent()){
+
+                        if (span.getValue().isPresent()) {
                             return span.getValue().get().isNegativeStrand();
-                        }
-                        else
+                        } else {
                             return false;
+                        }
                     }
-                    
+
                 }
-                
+
                 flipBinding = new FlipBinding(context.spanProperty());
-                        
+
                 lhv.flipDomainProperty().bind(flipBinding);
                 lhv.setData(data, end - start + 1, this);
 
@@ -179,20 +179,18 @@ public class BamView2 implements View<BamContext> {
                 return lhv.getGraphic();
             } catch (Throwable t) {
                 logger.info("task {} threw exception {}", this, t.getMessage());
-                logger.info("exception: ",t);
+                logger.info("exception: ", t);
                 throw t;
-            }
-            finally{
-                
-                if(sri!=null)
-                sri.close();
+            } finally {
+
+                if (sri != null) {
+                    sri.close();
+                }
                 logger.info("{} releasing semaphore for task {}", Thread.currentThread().getName(), this);
                 context.releaseReader();
                 logger.info("released sam reader semaphore");
             }
         }
-        
-        
 
         @Override
         protected void cancelled() {
