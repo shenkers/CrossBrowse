@@ -178,11 +178,11 @@ public class CurvedOverlayPath {
                 }
             });
 
-            logger.info("i {}", i);
+//            logger.info("i {}", i);
 
             // get the index of the genome
             int g = i < nGenomes * 2 ? i / 2 : ((4 * nGenomes - i - 1) / 2);
-            logger.info("g {}", g);
+//            logger.info("g {}", g);
 
             Pair<DoubleBinding, DoubleBinding> xCoord = componentXCoords.get(g);
             Pair<DoubleBinding, DoubleBinding> yCoord = componentYCoords.get(g);
