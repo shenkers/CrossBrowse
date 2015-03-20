@@ -71,21 +71,27 @@ public class ChainAlignmentOverlay {
         NucleotideMapping mappingFromGenomeToGenome = new NucleotideMapping(fromInterval, toInterval);
 
         logger.info("Adding alignments from {} to {}", fromGenome, toGenome);
+        logger.info("querying from {} to {}", fromInterval, toInterval);
         Set<Boolean> toNegativeStrand = new HashSet<>();
-        for (LocalAlignment localAlignment : alignmentSources.get(genomePair).getAlignment(fromInterval, toInterval)) {
-            if(
-                    IntervalTools.overlaps(localAlignment.getFromStart(), localAlignment.getFromEnd(), fromInterval.getStart(), fromInterval.getEnd())
-                    &&
-                    IntervalTools.overlaps(localAlignment.getToStart(), localAlignment.getToEnd(), toInterval.getStart(), toInterval.getEnd())
-                    ){
-            logger.info("before trim: {}-{}",localAlignment.getToStart(), localAlignment.getToEnd());
-            logger.info("after trim: {}-{}",localAlignment.trim(fromInterval, toInterval).getToStart(), localAlignment.trim(fromInterval, toInterval).getToEnd());
-            mappingFromGenomeToGenome.add(localAlignment.trim(fromInterval, toInterval));
-            toNegativeStrand.add(localAlignment.getToNegativeStrand());
+        List<LocalAlignment> alignments = alignmentSources.get(genomePair).getAlignment(fromInterval, toInterval);
+        logger.info("{} chains overlapping query region", alignments.size());
+        for (LocalAlignment localAlignment : alignments) {
+            if (IntervalTools.overlaps(localAlignment.getFromStart(), localAlignment.getFromEnd(), fromInterval.getStart(), fromInterval.getEnd())
+                    && IntervalTools.overlaps(localAlignment.getToStart(), localAlignment.getToEnd(), toInterval.getStart(), toInterval.getEnd())) {
+                logger.info("before trim: {}-{}", localAlignment.getToStart(), localAlignment.getToEnd());
+                logger.info("after trim: {}-{}", localAlignment.trim(fromInterval, toInterval).getToStart(), localAlignment.trim(fromInterval, toInterval).getToEnd());
+                mappingFromGenomeToGenome.add(localAlignment.trim(fromInterval, toInterval));
+                toNegativeStrand.add(localAlignment.getToNegativeStrand());
+            } else {
+                logger.info("alignment doesn't overlap queried regions");
+                logger.info("from {}:{}-{}", fromInterval.getChr(), fromInterval.getStart(), fromInterval.getEnd());
+                logger.info("to {}:{}-{}", toInterval.getChr(), toInterval.getStart(), toInterval.getEnd());
+                logger.info("local alignment: from {}:{}-{}", localAlignment.getFromSequenceName(),localAlignment.getFromStart(), localAlignment.getFromEnd());
+                logger.info("local alignment: to {}:{}-{}", localAlignment.getToSequenceName(),localAlignment.getToStart(), localAlignment.getToEnd());
             }
         }
-        
-        assert toNegativeStrand.size()==1 : "Can't represent alignments go to plus and minus strand yet";
+
+        assert toNegativeStrand.size() == 1 : "Can't represent alignments go to plus and minus strand yet";
 
         weaver.add(toInterval, fromGenome, toGenome, toNegativeStrand.iterator().next(), mappingFromGenomeToGenome);
 
@@ -107,165 +113,272 @@ public class ChainAlignmentOverlay {
         NucleotideMapping mappingFromGenomeToGenome = new NucleotideMapping(fromInterval, toInterval);
 
         logger.info("Adding alignments from {} to {}", fromGenome, toGenome);
-         Set<Boolean> toNegativeStrand = new HashSet<>();
-       for (LocalAlignment localAlignment : alignmentSources.get(genomePair).getAlignment(fromInterval, toInterval)) {
-           if(
-                    IntervalTools.overlaps(localAlignment.getFromStart(), localAlignment.getFromEnd(), fromInterval.getStart(), fromInterval.getEnd())
-                    &&
-                    IntervalTools.overlaps(localAlignment.getToStart(), localAlignment.getToEnd(), toInterval.getStart(), toInterval.getEnd())
-                    ){    
-           logger.info("before trim to {}: {}-{}", toInterval, localAlignment.getToStart(), localAlignment.getToEnd());
-            logger.info("after trim: {}-{}",localAlignment.trim(fromInterval, toInterval).getToStart(), localAlignment.trim(fromInterval, toInterval).getToEnd());
+        logger.info("querying from {} to {}", fromInterval, toInterval);
+        Set<Boolean> toNegativeStrand = new HashSet<>();
+        List<LocalAlignment> alignments = alignmentSources.get(genomePair).getAlignment(fromInterval, toInterval);
+        logger.info("{} chains overlapping query region", alignments.size());
          
-           mappingFromGenomeToGenome.add(localAlignment.trim(fromInterval, toInterval));
-                 toNegativeStrand.add(localAlignment.getToNegativeStrand());
-           }
-   }
-        assert toNegativeStrand.size()==1 : "Can't represent alignments go to plus and minus strand yet";
+        for (LocalAlignment localAlignment : alignments) {
+            if (IntervalTools.overlaps(localAlignment.getFromStart(), localAlignment.getFromEnd(), fromInterval.getStart(), fromInterval.getEnd())
+                    && IntervalTools.overlaps(localAlignment.getToStart(), localAlignment.getToEnd(), toInterval.getStart(), toInterval.getEnd())) {
+                logger.info("before trim to {}: {}-{}", toInterval, localAlignment.getToStart(), localAlignment.getToEnd());
+                logger.info("after trim: {}-{}", localAlignment.trim(fromInterval, toInterval).getToStart(), localAlignment.trim(fromInterval, toInterval).getToEnd());
+
+                mappingFromGenomeToGenome.add(localAlignment.trim(fromInterval, toInterval));
+                toNegativeStrand.add(localAlignment.getToNegativeStrand());
+            } else {
+                logger.info("alignment doesn't overlap queried regions");
+                logger.info("from {}:{}-{}", fromInterval.getChr(), fromInterval.getStart(), fromInterval.getEnd());
+                logger.info("to {}:{}-{}", toInterval.getChr(), toInterval.getStart(), toInterval.getEnd());
+                logger.info("local alignment: from {}:{}-{}", localAlignment.getFromStart(), localAlignment.getFromEnd());
+                logger.info("local alignment: to {}:{}-{}", localAlignment.getToStart(), localAlignment.getToEnd());
+            }
+        }
+        assert toNegativeStrand.size() == 1 : "Can't represent alignments go to plus and minus strand yet";
         if (alignmentInverted) {
             weaver.add(fromInterval, toGenome, fromGenome, toNegativeStrand.iterator().next(), mappingFromGenomeToGenome.inverse());
         } else {
             weaver.add(toInterval, fromGenome, toGenome, toNegativeStrand.iterator().next(), mappingFromGenomeToGenome);
         }
     }
-    
-    
 
     public List<Map<Genome, Pair<Double, Double>>> getAlignmentColumnsRelativeX(Map<Genome, GenomeSpan> displayedSpans, int basesPerColumn) {
         assert basesPerColumn > 0 : String.format("basesPerColumn should b > 0, (got %d)", basesPerColumn);
-        
+
         Set<Genome> incorporated = new HashSet<>();
         Set<Pair<Genome, Genome>> remainder = new HashSet<>(alignmentSources.keySet());
 
-        AlignmentWeaver weaver = null;
-        while (!remainder.isEmpty()) {
+        try {
+            AlignmentWeaver weaver = null;
+            while (!remainder.isEmpty()) {
 
-            Iterator<Pair<Genome, Genome>> it = remainder.iterator();
+                Iterator<Pair<Genome, Genome>> it = remainder.iterator();
 
-            while (it.hasNext()) {
-                Pair<Genome, Genome> p = it.next();
-                // if one of the genomes in this pair has not yet been woven in
-                // if one of the genomes in the pair is already in the alignment we can weave this one in
-                if (incorporated.size() == 0 || incorporated.contains(p.getKey()) ^ incorporated.contains(p.getValue())) {
-                    logger.info("incorporating pair {} {}", p.getKey().getId(), p.getValue().getId());
-                    it.remove();
-                    incorporated.add(p.getKey());
-                    incorporated.add(p.getValue());
+                while (it.hasNext()) {
+                    Pair<Genome, Genome> p = it.next();
+                    // if one of the genomes in this pair has not yet been woven in
+                    // if one of the genomes in the pair is already in the alignment we can weave this one in
+                    if (incorporated.size() == 0 || incorporated.contains(p.getKey()) ^ incorporated.contains(p.getValue())) {
+                        logger.info("incorporating pair {} {}", p.getKey().getId(), p.getValue().getId());
+                        it.remove();
+                        incorporated.add(p.getKey());
+                        incorporated.add(p.getValue());
 
-                    if (weaver == null) {
-                        weaver = initializeWeaver(p, displayedSpans);
-                    } else {
-                        Genome toAdd = incorporated.contains(p.getKey()) ? p.getValue() : p.getKey();
-                        logger.info("adding {} to the alignment",toAdd);
-                        addAlignment(p, toAdd, displayedSpans, weaver);
+                        if (weaver == null) {
+                            weaver = initializeWeaver(p, displayedSpans);
+                        } else {
+                            Genome toAdd = incorporated.contains(p.getKey()) ? p.getValue() : p.getKey();
+                            logger.info("adding {} to the alignment", toAdd);
+                            addAlignment(p, toAdd, displayedSpans, weaver);
+                        }
                     }
                 }
             }
-        }
 
-        Map<Genome, List<Integer>> order = weaver.getOrder();
-        
-        logger.info("order keyset {}", order.keySet());
-     
-        Integer max = order.values().stream().flatMap(o -> o.stream()).max((x, y) -> x - y).get();
+            Map<Genome, List<Integer>> order = weaver.getOrder();
 
-        Map<Genome, Integer> displayedSpanLength = displayedSpans.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().length()));
-
-        List<Map<Genome, Pair<Double, Double>>> relativeCoordinates = new ArrayList<>();
-        Map<Genome, Pair<Double, Double>> previous = displayedSpans.keySet().stream().collect(Collectors.toMap(g -> g, g -> new Pair<Double, Double>(0., 0.)));
-        for (int i = 0; i <= max; i += basesPerColumn) {
-            Map<Genome, Pair<Double, Double>> relativeX = new HashMap<>();
-            relativeCoordinates.add(relativeX);
-
+            logger.info("order keyset {}", order.keySet());
             for (Genome g : displayedSpans.keySet()) {
-                List<Integer> gOrder = order.get(g);
-                int l = displayedSpanLength.get(g);
+                logger.info("{} order {}", g, order.get(g));
+            }
 
-                List<Integer> indices = new ArrayList<>();
-                for (int j = i; j < i + basesPerColumn; j++) {
-                    int index = gOrder.indexOf(j);
-                    if (index != -1) {
-                        indices.add(index);
+            Integer max = order.values().stream().flatMap(o -> o.stream()).max((x, y) -> x - y).get();
+
+            Map<Genome, Integer> displayedSpanLength = displayedSpans.entrySet().stream().collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue().length()));
+
+            List<Map<Genome, Pair<Double, Double>>> relativeCoordinates = new ArrayList<>();
+//        Map<Genome, Pair<Double, Double>> previous = displayedSpans.keySet().stream().collect(Collectors.toMap(g -> g, g -> new Pair<Double, Double>(0., 0.)));
+            {
+                for (int i = 0; i <= max; i += basesPerColumn) {
+                    Map<Genome, List<Integer>> collect = displayedSpans.keySet().stream().collect(Collectors.toMap(g -> g, g -> new ArrayList<>()));
+                    boolean anyAlignedColumns = false;
+                    for (int j = i; j < i + basesPerColumn; j++) {
+                        boolean isAlignedColumn = true;
+                        for (Genome g : displayedSpans.keySet()) {
+                            List<Integer> gOrder = order.get(g);
+                            isAlignedColumn &= gOrder.contains(j);
+                        }
+                        if (isAlignedColumn) {
+                            anyAlignedColumns = true;
+                            for (Genome g : displayedSpans.keySet()) {
+                                List<Integer> gOrder = order.get(g);
+                                int index = gOrder.indexOf(j);
+                                if (index != -1) {
+//                                    logger.info("genome {} contains index {}", g, j);
+                                    List<Integer> indices = collect.get(g);
+                                    indices.add(index);
+                                }
+                            }
+                        }
+                    }
+                    if (anyAlignedColumns) {
+                        Map<Genome, Pair<Double, Double>> relativeX = new HashMap<>();
+                        for (Genome g : displayedSpans.keySet()) {
+                            int l = displayedSpanLength.get(g);
+                            List<Integer> indices = collect.get(g);
+                            Pair<Double, Double> next = new Pair<>((Collections.min(indices) + 0.) / l, (Collections.max(indices) + 1.) / l);
+                            logger.info("genome {} adding pair {}", g, next);
+                            logger.info("indices {} l {}", indices, l);
+                            relativeX.put(g, next);
+                        }
+                        relativeCoordinates.add(relativeX);
                     }
                 }
-                Pair<Double, Double> next = null;
-                if (indices.size() > 0) {
-                    next = new Pair<>((Collections.min(indices) + 0. )/ l, (Collections.max(indices) + 1. )/ l);
-                } else {
-                   next = new Pair<>(previous.get(g).getValue(),previous.get(g).getValue());
-                }
-                relativeX.put(g, next);
-                
             }
-            
-            
-            previous = relativeX;
+            if (max % basesPerColumn != 0) {
+                int remainingColumns = max % basesPerColumn;
 
-        }
-        if(max % basesPerColumn != 0){
-            int remainingColumns = max % basesPerColumn;
-            
-            Map<Genome, Pair<Double, Double>> relativeX = new HashMap<>();
-            relativeCoordinates.add(relativeX);
-
-            for (Genome g : displayedSpans.keySet()) {
-                List<Integer> gOrder = order.get(g);
-                int l = displayedSpanLength.get(g);
-
-                List<Integer> indices = new ArrayList<>();
+                Map<Genome, List<Integer>> collect = displayedSpans.keySet().stream().collect(Collectors.toMap(g -> g, g -> new ArrayList<>()));
+                boolean anyAlignedColumns = false;
                 for (int j = max - remainingColumns; j <= max; j++) {
-                    int index = gOrder.indexOf(j);
-                    if (index != -1) {
-                        indices.add(index);
+                    boolean isAlignedColumn = true;
+                    for (Genome g : displayedSpans.keySet()) {
+                        List<Integer> gOrder = order.get(g);
+                        isAlignedColumn &= gOrder.contains(j);
+                    }
+                    if (isAlignedColumn) {
+                        anyAlignedColumns = true;
+                        for (Genome g : displayedSpans.keySet()) {
+                            List<Integer> gOrder = order.get(g);
+                            int index = gOrder.indexOf(j);
+                            if (index != -1) {
+//                                logger.info("genome {} contains index {}", g, j);
+                                List<Integer> indices = collect.get(g);
+                                indices.add(index);
+                            }
+                        }
                     }
                 }
-                Pair<Double, Double> next = null;
-                if (indices.size() > 0) {
-                    next = new Pair<>((Collections.min(indices) + 0. )/ l, (Collections.max(indices) + 1. )/ l);
-                } else {
-                    next = new Pair<>(previous.get(g).getValue(),previous.get(g).getValue());
+                if (anyAlignedColumns) {
+                    Map<Genome, Pair<Double, Double>> relativeX = new HashMap<>();
+                    for (Genome g : displayedSpans.keySet()) {
+                        int l = displayedSpanLength.get(g);
+                        List<Integer> indices = collect.get(g);
+                        Pair<Double, Double> next = new Pair<>((Collections.min(indices) + 0.) / l, (Collections.max(indices) + 1.) / l);
+                        logger.info("genome {} adding pair {}", g, next);
+                        logger.info("indices {} l {}", indices, l);
+                        relativeX.put(g, next);
+                    }
+                    relativeCoordinates.add(relativeX);
                 }
-                relativeX.put(g, next);
-                
             }
-        }
 
-        return relativeCoordinates;
+//        for (int i = 0; i <= max; i += basesPerColumn) {
+//            Map<Genome, Pair<Double, Double>> relativeX = new HashMap<>();
+//
+//            Set<Integer> commonCoordinates = Stream.iterate(i, j -> j + 1).limit(i + basesPerColumn).collect(Collectors.toSet());
+//
+//            for (Genome g : displayedSpans.keySet()) {
+//                List<Integer> gOrder = order.get(g);
+//                int l = displayedSpanLength.get(g);
+//
+//                List<Integer> indices = new ArrayList<>();
+//                List<Integer> toRetain = new ArrayList<>();
+//                for (int j = i; j < i + basesPerColumn; j++) {
+//                    int index = gOrder.indexOf(j);
+//                    if (index != -1) {
+//                        logger.info("genome {} contains index {}", g, j);
+//                        indices.add(index);
+//                        toRetain.add(j);
+//                    }
+//                }
+//                commonCoordinates.retainAll(toRetain);
+//
+//                if (indices.size() > 0) {
+//                    Pair<Double, Double> next = null;
+//                    next = new Pair<>((Collections.min(indices) + 0.) / l, (Collections.max(indices) + 1.) / l);
+//                    logger.info("genome {} adding pair {}", g, next);
+//                    logger.info("indices {} l {}", indices, l);
+//                    relativeX.put(g, next);
+//                }
+////                else {
+////                   next = new Pair<>(previous.get(g).getValue(),previous.get(g).getValue());
+////                }
+//
+//            }
+//
+//            if (!commonCoordinates.isEmpty()) {
+//                relativeCoordinates.add(relativeX);
+//            }
+////            previous = relativeX;
+//
+//        }
+//        if (max % basesPerColumn != 0) {
+//            int remainingColumns = max % basesPerColumn;
+//
+//            Map<Genome, Pair<Double, Double>> relativeX = new HashMap<>();
+//            Set<Integer> commonCoordinates = Stream.iterate(max - remainingColumns, j -> j + 1).limit(max).collect(Collectors.toSet());
+//
+//            for (Genome g : displayedSpans.keySet()) {
+//                List<Integer> gOrder = order.get(g);
+//                int l = displayedSpanLength.get(g);
+//
+//                List<Integer> indices = new ArrayList<>();
+//                List<Integer> toRetain = new ArrayList<>();
+//                for (int j = max - remainingColumns; j <= max; j++) {
+//                    int index = gOrder.indexOf(j);
+//                    if (index != -1) {
+//                        indices.add(index);
+//                        toRetain.add(j);
+//                    }
+//                }
+//                commonCoordinates.retainAll(toRetain);
+//
+//                if (indices.size() > 0) {
+//                    Pair<Double, Double> next = null;
+//                    next = new Pair<>((Collections.min(indices) + 0.) / l, (Collections.max(indices) + 1.) / l);
+//                    relativeX.put(g, next);
+//
+//                }
+////                else {
+////                    next = new Pair<>(previous.get(g).getValue(),previous.get(g).getValue());
+////                }
+//
+//            }
+//            if (!commonCoordinates.isEmpty()) {
+//                relativeCoordinates.add(relativeX);
+//            }
+//        }
+            return relativeCoordinates;
+        } catch (Exception e) {
+            logger.error("error constructing alignment from specified regions", e);
+        }
+        return new ArrayList<>();
     }
-    
-    public List<Node> getOverlayPaths(List<Genome> gOrder, Map<Genome,GenomeSpan> displayedSpans, Map<Genome, BooleanBinding> genomeFlipped, int basesPerColumn, List<DoubleProperty> dividerPositionProperties, ObservableValue<Double> widthProperty, ObservableDoubleValue heightProperty){
-         
+
+    public List<Node> getOverlayPaths(List<Genome> gOrder, Map<Genome, GenomeSpan> displayedSpans, Map<Genome, ObservableValue<? extends Boolean>> genomeFlipped, int basesPerColumn, List<DoubleProperty> dividerPositionProperties, ObservableValue<Double> widthProperty, ObservableDoubleValue heightProperty) {
+
         List<Map<Genome, Pair<Double, Double>>> alignmentColumnsRelativeX = getAlignmentColumnsRelativeX(displayedSpans, basesPerColumn);
-        
-        List<BooleanBinding> flips = gOrder.stream().map(g->genomeFlipped.get(g)).collect(Collectors.toList());
-                
+
+        List<ObservableValue<? extends Boolean>> flips = gOrder.stream().map(g -> genomeFlipped.get(g)).collect(Collectors.toList());
+
         List<Node> paths = new ArrayList<>();
-        
+
         for (Map<Genome, Pair<Double, Double>> column : alignmentColumnsRelativeX) {
             logger.info("{}", column);
-            
+
             boolean allRowsAligned = true;
             for (int i = 0; i < gOrder.size(); i++) {
                 Genome g = gOrder.get(i);
                 Pair<Double, Double> calculatedRelativeX = column.get(g);
                 allRowsAligned &= calculatedRelativeX.getValue() - calculatedRelativeX.getKey() > 0;
             }
-            
-            if(!allRowsAligned)
+
+            if (!allRowsAligned) {
                 continue;
-            
-            
+            }
+
             CurvedOverlayPath cop = new CurvedOverlayPath(gOrder.size());
-            for(int i=0; i<gOrder.size(); i++){
+            for (int i = 0; i < gOrder.size(); i++) {
                 cop.getGenomeFlipped().get(i).bind(flips.get(i));
             }
-            
+
             paths.add(cop.getPath());
-            
+
             cop.getXScale().bind(widthProperty);
             cop.getYScale().bind(heightProperty);
 
-                cop.getPath().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
+            cop.getPath().setFill(new Color(Math.random(), Math.random(), Math.random(), .1));
 //            cop.getPath().setStroke(new Color(0, 0, 0, 0));
 //            cop.getPath().setStrokeWidth(1.);
             for (int i = 0; i < gOrder.size(); i++) {
@@ -276,7 +389,7 @@ public class ChainAlignmentOverlay {
                 relativeX.getKey().setValue(calculatedRelativeX.getKey());
                 relativeX.getValue().setValue(calculatedRelativeX.getValue());
                 Pair<DoubleProperty, DoubleProperty> relativeY = cop.getRelativeYCoords().get(i);
-                
+
                 if (i == 0) {
                     logger.info("case 1 : {} i={}", g, i);
                     relativeY.getKey().setValue(0);
@@ -291,9 +404,9 @@ public class ChainAlignmentOverlay {
                     relativeY.getValue().bind(dividerPositionProperties.get(i * 2));
                 }
             }
-            
+
         }
-        
+
         return paths;
     }
 }
