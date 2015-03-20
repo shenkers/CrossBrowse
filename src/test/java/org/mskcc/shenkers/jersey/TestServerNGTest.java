@@ -70,11 +70,11 @@ public class TestServerNGTest {
 
     @Test
     public void testSomeMethod() {
-        try {
-            System.in.read();
-        } catch (IOException ex) {
-            Logger.getLogger(TestServerNGTest.class.getName()).log(Level.SEVERE, null, ex);
-        }
+//        try {
+//            System.in.read();
+//        } catch (IOException ex) {
+//            Logger.getLogger(TestServerNGTest.class.getName()).log(Level.SEVERE, null, ex);
+//        }
     }
 
 }
