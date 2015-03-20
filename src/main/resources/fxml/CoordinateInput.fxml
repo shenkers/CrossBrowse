@@ -12,9 +12,12 @@
       <ComboBox fx:id="genomeSelected" promptText="Genome" visibleRowCount="5" />
       <Label text="Coordinate" />
       <TextField fx:id="coordinateField" />
+      <TextField fx:id="currentCoordinate" />
       <Button fx:id="goButton" onAction="#parseAndUpdateCoordinates" text="Go" />
       <Button mnemonicParsing="false" onAction="#zoomIn" text="+" />
-      <Button mnemonicParsing="false" text="-" />
+      <Button mnemonicParsing="false" onAction="#zoomOut" text="-" />
+      <Button mnemonicParsing="false" onAction="#shiftLeft" text="&#60;" />
+      <Button mnemonicParsing="false" onAction="#shiftRight" text=">" />
       <Button mnemonicParsing="false" onAction="#flipSelectedSpan" text="Flip" />
    </children>
 </FlowPane>

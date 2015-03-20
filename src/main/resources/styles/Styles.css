@@ -12,4 +12,9 @@
 
 .scroll-pane.alignment-scroll-pane > .scroll-bar {  
     -fx-opacity: 0;  
-} 
+}
+
+.current-coord{
+    -fx-display-caret: false;
+    -fx-background-color: lightgray;
+}
