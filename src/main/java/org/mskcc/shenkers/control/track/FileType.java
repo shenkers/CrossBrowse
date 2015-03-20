@@ -12,5 +12,6 @@ package org.mskcc.shenkers.control.track;
 public enum FileType {
 
     BAM,
-    WIG
+    WIG,
+    GTF
 }
