@@ -55,7 +55,7 @@ public class AlignmentViewNGTest extends Application {
 
     @Test
     public void testSomeMethod() {
-        launch(new String[0]);
+//        launch(new String[0]);
     }
 
     AlignmentOverlay root;

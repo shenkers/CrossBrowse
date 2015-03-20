@@ -64,7 +64,7 @@ public class ModelSingletonNGTest {
     public void testGetInstance() {
         System.out.println("getInstance");
 
-        ModelSingleton result = ModelSingleton.getInstance();
+        ModelSingleton result = new ModelSingleton();
         Genome g1 = new Genome("g1", "1");
         Genome g2 = new Genome("g2", "2");
         result.addGenome(g1);
