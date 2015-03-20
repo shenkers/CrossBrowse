@@ -5,6 +5,8 @@
  */
 package org.mskcc.shenkers.model;
 
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
 import java.util.ArrayList;
 import java.util.HashMap;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -31,13 +33,14 @@ import org.mskcc.shenkers.model.datatypes.GenomeSpan;
  *
  * @author sol
  */
+@Singleton
 public class ModelSingleton {
 
     private static final Logger logger = LogManager.getLogger();
 
-    private static ModelSingleton instance = null;
-
-    private ModelSingleton() {
+    @Inject
+    ModelSingleton() {
+        logger.info("creating model singleton");
         genomes = FXCollections.observableArrayList();
         tracks = FXCollections.observableHashMap();
         nTracks = 0;
@@ -45,39 +48,32 @@ public class ModelSingleton {
         alignments = FXCollections.observableHashMap();
     }
 
-    public static synchronized ModelSingleton getInstance() {
-        if (instance == null) {
-            instance = new ModelSingleton();
-        }
-
-        return instance;
-    }
-
     ObservableList<Genome> genomes;
     Map<Genome, ObservableList<Track<AbstractContext>>> tracks;
     ObservableMap<Genome, Property<Optional<GenomeSpan>>> spans;
-    Map<Pair<Genome,Genome>,AlignmentSource> alignments;
+    Map<Pair<Genome, Genome>, AlignmentSource> alignments;
 
     private int nTracks;
 
     public ObservableValue<Optional<GenomeSpan>> getSpan(Genome g) {
         return spans.get(g);
     }
-    
-    public void setAlignments(List<Pair<Genome,Genome>> genomePairs, List<AlignmentSource> alignmentSources){
-        for(int i=0; i<genomePairs.size(); i++){
+
+    public void setAlignments(List<Pair<Genome, Genome>> genomePairs, List<AlignmentSource> alignmentSources) {
+        for (int i = 0; i < genomePairs.size(); i++) {
             alignments.put(genomePairs.get(i), alignmentSources.get(i));
         }
     }
-    
-    public Map<Pair<Genome,Genome>,AlignmentSource> getAlignments(){
+
+    public Map<Pair<Genome, Genome>, AlignmentSource> getAlignments() {
         return alignments;
     }
 
+    @UpdatesCoordinates
     public void setSpan(Genome g, Optional<GenomeSpan> span) {
-        logger.info("genome {}",g);
-        logger.info("spans.get(g) {}",spans.get(g));
-        logger.info("span {}",span);
+        logger.info("genome {}", g);
+        logger.info("spans.get(g) {}", spans.get(g));
+        logger.info("span {}", span);
         this.spans.get(g).setValue(span);
     }
 
@@ -123,6 +119,10 @@ public class ModelSingleton {
 
     public ObservableList<Track<AbstractContext>> getTracks(Genome g) {
         return tracks.get(g);
+    }
+
+    public ObservableMap<Genome, Property<Optional<GenomeSpan>>> getObservableSpans() {
+        return FXCollections.unmodifiableObservableMap(spans);
     }
 
 }
