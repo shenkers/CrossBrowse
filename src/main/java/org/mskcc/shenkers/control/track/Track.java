@@ -52,49 +52,21 @@ public class Track<T extends AbstractContext> {
     public Track(T context, List<View<T>> availableViews) {
         this.dataContext = context;
         this.availableViews = availableViews;
-        this.displayedView = new SimpleObjectProperty(new View<T>() {
+        this.displayedView = new SimpleObjectProperty(availableViews.isEmpty() ? new View<T>() {
 
             @Override
             public Task<Pane> getContent(T context) {
-
-                Label label = new Label("EMPTY");
-//                  MenuItem[] items = availableViews.stream().map((View<T> t) ->{
-//                    MenuItem mi = new MenuItem(t.toString(), t.getContent(dataContext));
-//                    mi.setOnAction(
-//                            (ActionEvent event) -> {
-//                            setView(t);
-//                        }
-//                    );
-//                    return mi;
-//                }).collect(Collectors.toList()).toArray(new MenuItem[0]);
-//                
-//                ContextMenu menu = new ContextMenu(items);
-//                label.setContextMenu(menu);
-                BorderPane p = new BorderPane();
-                MonadicBinding<String> map = EasyBind.map(p.widthProperty(), v -> String.format("%.1f", v));
-
-                label.textProperty().bind(map);
-                p.setCenter(label);
                 
                 class initialContent extends Task<Pane>{
                         @Override
                         protected Pane call() throws Exception {
-                            return p;
+                            return new BorderPane(new Label("No view available for "+dataContext.getClass().getName()));
                         }
                     }
 
-//                Service<Pane> task = new Service<Pane>() {
-//                    
-//                    @Override
-//                    protected Task<Pane> createTask() {
-//                        return new initialContent();
-//                    }
-//
-//                };
-
                 return new initialContent();
             }
-        });
+        } : availableViews.get(0));
         
         renderStrategy = new RenderStrategy<>();
         renderStrategy.setView(displayedView.getValue());
