@@ -9,19 +9,21 @@ import javafx.scene.layout.Pane;
 import javafx.util.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mskcc.shenkers.control.track.DomainFlippable;
 
 /**
  *
  * @author sol
  */
-public class IntervalNode {
+
+public class IntervalNode<T extends Pane & DomainFlippable> {
 
     private static final Logger logger = LogManager.getLogger();
 
     Pair<Integer, Integer> interval;
-    Pane content;
+    T content;
 
-    public IntervalNode(Pair<Integer, Integer> interval, Pane content) {
+    public IntervalNode(Pair<Integer, Integer> interval, T content) {
         this.interval = interval;
         this.content = content;
     }
