@@ -2,6 +2,35 @@
     -fx-font-weight: bold;
 }
 
+
+
+.genome-list-view{
+    -fx-background-color: white;
+    -fx-text-fill: black;   
+}
+
+/*.list-cell:selected > .track{
+    -fx-background-color: orange;
+}
+
+.list-cell:filled:selected:focused > .track{
+    -fx-background-color: yellow;
+    -fx-text-fill: black;
+    
+}
+
+.list-cell:filled:selected > .track{
+    -fx-background-color: pink;
+    -fx-text-fill: black;
+    
+}*/
+
+.track{
+    -fx-background-color: white;
+    -fx-text-fill: black;
+}
+
+
 /*.split-pane > .split-pane-divider {  
     -fx-padding: 0 0.01em 0 0.01em;  
 } */
