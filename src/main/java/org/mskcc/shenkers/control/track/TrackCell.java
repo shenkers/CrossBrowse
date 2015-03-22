@@ -19,8 +19,12 @@ import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.MenuItem;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -33,7 +37,7 @@ public class TrackCell<T extends AbstractContext> extends ListCell<Track<T>> {
     final static Logger logger = LogManager.getLogger();
     
     public TrackCell() {
-        setPadding(new Insets(2));
+        setPadding(new Insets(2,0,2,0));
     }
 
     protected void updateItem(Track<T> track, boolean empty) {
@@ -69,7 +73,11 @@ public class TrackCell<T extends AbstractContext> extends ListCell<Track<T>> {
                 public void handle(WorkerStateEvent event) {
                     System.out.println("succeeded");
                     Pane value = renderStrategy.getValue();
-                    setGraphic(new BorderPane(value));
+                    BorderPane pane = new BorderPane(value);
+//                    pane.getStyleClass().add("track");
+//                    pane.getStyleClass().add("track");
+                    pane.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+                    setGraphic(pane);
                 }
             });
             

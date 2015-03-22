@@ -20,18 +20,24 @@ public class GeneModel {
 
     private static final Logger logger = LogManager.getLogger ();
     
-    private RangeSet<Integer> exons;
+    Range<Integer> span;
+    private Optional<RangeSet<Integer>> exons;
     private Optional<Range<Integer>> cds;
 
-    public GeneModel(RangeSet<Integer> exons, Optional<Range<Integer>> cds) {
+    public GeneModel(Range<Integer> span, Optional<RangeSet<Integer>> exons, Optional<Range<Integer>> cds) {
+        this.span = span;
         this.exons = exons;
         this.cds = cds;
+    }
+    
+    public Range<Integer> getSpan(){
+        return span;
     }
 
     /**
      * @return the exons
      */
-    public RangeSet<Integer> getExons() {
+    public Optional<RangeSet<Integer>> getExons() {
         return exons;
     }
 

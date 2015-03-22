@@ -43,6 +43,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.geometry.Bounds;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
@@ -54,7 +55,10 @@ import javafx.scene.control.ListView;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
@@ -68,6 +72,7 @@ import javafx.util.Callback;
 import javafx.util.Pair;
 import javafx.util.StringConverter;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.controlsfx.validation.ValidationResult;
@@ -96,6 +101,7 @@ import org.mskcc.shenkers.model.datatypes.Genome;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.view.LineHistogramView;
 import org.mskcc.shenkers.view.VerticalHiddenScrollPane;
+import org.reactfx.EventSource;
 
 public class FXMLController implements Initializable {
 
@@ -305,6 +311,118 @@ public class FXMLController implements Initializable {
         });
     }
 
+    @FXML
+    private void loadTracksByExtension(ActionEvent event) {
+        logger.info("Loading track...");
+        System.out.println("loading track...");
+
+        GridPane gp1 = new GridPane();
+        gp1.add(new Label("Track file (BAM)"), 0, 0);
+        Button selectFile = new Button("Select File");
+        TextField selectedFile = new TextField("");
+        gp1.add(selectedFile, 1, 0);
+        gp1.add(selectFile, 2, 0);
+        selectFile.setOnAction(
+                actionEvent -> {
+                    FileChooser fc = new FileChooser();
+                    if (lastDir != null) {
+                        fc.setInitialDirectory(lastDir);
+                    }
+                    Stage s = new Stage();
+                    fc.setTitle("Select a fasta reference sequence");
+                    List<File> list = fc.showOpenMultipleDialog(s);
+
+                    if (list != null) {
+                        // TODO error if path contains a comma
+                        selectedFile.setText(StringUtils.join(list.stream().map(f -> f.getAbsolutePath()).collect(Collectors.toList()), ","));
+                        for (File selection : list) {
+                            lastDir = selection.isDirectory() ? selection : selection.getParentFile();
+                            System.out.println(selection.getAbsolutePath());
+
+                        }
+                    }
+                }
+        );
+
+        gp1.add(new Label("Reference sequence ID"), 0, 1);
+
+        ObservableList<Genome> genomes = model.getGenomes();
+//                = FXCollections.observableArrayList(
+//                        new Genome("dm3", "melanogaster"),
+//                        new Genome("dya", "yakuba")
+//                );
+
+        ComboBox<Genome> genomeSelector = new ComboBox<>(genomes);
+
+        genomeSelector.setConverter(
+                new StringConverter<Genome>() {
+
+                    public String toString(Genome object) {
+                        return object.getId();
+                    }
+
+                    @Override
+                    public Genome fromString(String string) {
+                        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+                    }
+                }
+        );
+
+        gp1.add(genomeSelector, 1, 1);
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Load track");
+        alert.setHeaderText("Configure new track");
+        alert.getDialogPane().setContent(gp1);
+
+//        ButtonType loginButtonType = new ButtonType("Create genome", ButtonData.FINISH);
+//        alert.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
+//
+//        ((Button)alert.getDialogPane().lookupButton(ButtonData.OK_DONE)).setText("Create genome");
+        alert.showAndWait().ifPresent(buttonType -> {
+            System.err.println(buttonType);
+            System.err.println(buttonType.getText());
+            if (buttonType.equals(ButtonType.OK)) {
+                System.err.println("finished");
+//                Track t = new Track() {
+//                    public String getName() {
+//                        return selectedFile.getText();
+//                    }
+//                };
+                String[] text = selectedFile.getText().split(",");
+                for (String path : text) {
+                    Track<BamContext> t = null;
+
+                    if (path.matches(".*.bam$")) {
+                        t=trackBuilder.load(FileType.BAM, path);
+                    }
+                    if (path.matches(".*.bw$")) {
+                        t=trackBuilder.load(FileType.WIG, path);
+                    }
+                    if (path.matches(".*.gtf$")) {
+                        t=trackBuilder.load(FileType.GTF, path);
+                    }
+
+                    Genome selectedGenome = genomeSelector.getSelectionModel().getSelectedItem();
+
+                    // bind the span property of this track to the model
+                    t.getSpan().bind(model.getSpan(selectedGenome));
+
+                    t.getSpan().addListener(new ChangeListener<Optional<GenomeSpan>>() {
+                        public void changed(ObservableValue<? extends Optional<GenomeSpan>> observable, Optional<GenomeSpan> oldValue, Optional<GenomeSpan> newValue) {
+                            logger.info("span change detected in track "+observable);
+                        }
+                    });
+
+                    model.addTrack(selectedGenome, t);
+                }
+            }
+            if (buttonType.equals(ButtonType.CANCEL)) {
+                System.err.println("Canceled");
+            }
+        });
+    }
+
     File lastDir;
 
     @FXML
@@ -402,11 +520,11 @@ public class FXMLController implements Initializable {
             }
         });
     }
-    
+
     @FXML
     private void loadGtfGeneTrack(ActionEvent event) {
         logger.info("Loading track...");
-       
+
         GridPane gp1 = new GridPane();
         gp1.add(new Label("Track file (GTF)"), 0, 0);
         Button selectFile = new Button("Select File");
@@ -598,57 +716,56 @@ public class FXMLController implements Initializable {
                     overlay.getChildren().clear();
                     logger.info("checking if all spans set");
                     boolean allSpansSet = model.getGenomes().stream().allMatch(g -> model.getSpan(g).getValue().isPresent());
-                    if(allSpansSet){
+                    if (allSpansSet) {
                         logger.info("all spans set, building alignment component");
-                    Map<Genome, GenomeSpan> spans = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> model.getSpan(g).getValue().get()));
+                        Map<Genome, GenomeSpan> spans = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> model.getSpan(g).getValue().get()));
 
 //                2R:12743706-12747879
 //                2R:16228220-16231888:-
 //                        /home/sol/lailab/sol/genomes/chains/netChainSubset/dm3.droYak3.net.chain
 //                    /home/sol/lailab/sol/mel_yak_vir/total_rna/M/T.bam
 //                    /home/sol/lailab/sol/mel_yak_vir/total_rna/Y/T.bam
-                    //                    /home/sol/lailab/sol/mel_yak_vir/total_rna/V/T.bam
+                        //                    /home/sol/lailab/sol/mel_yak_vir/total_rna/V/T.bam
 //                    /home/sol/lailab/sol/genomes/chains/netChainSubset/M.Y.chain
 //                    /home/sol/lailab/sol/genomes/chains/netChainSubset/M.V.chain
 //                    /home/sol/lailab/sol/genomes/chains/netChainSubset/Y.V.chain
 //3R:4892065-4900435
 //3R:8938890-8947395
 //                    scaffold_12855:8568616-8577467
-                    //3R:4895365-4897435
+                        //3R:4895365-4897435
 //3R:8942090-8944295
 //                    scaffold_12855:8570616-8573467
-                    class flipBinding extends BooleanBinding implements ObservableValue<Boolean>{
+                        class flipBinding extends BooleanBinding implements ObservableValue<Boolean> {
 
-                        ObservableValue<Optional<GenomeSpan>> g;
+                            ObservableValue<Optional<GenomeSpan>> g;
 
-                        public flipBinding(ObservableValue<Optional<GenomeSpan>> g) {
-                            super.bind(g);
-                            this.g = g;
+                            public flipBinding(ObservableValue<Optional<GenomeSpan>> g) {
+                                super.bind(g);
+                                this.g = g;
+                            }
+
+                            @Override
+                            protected boolean computeValue() {
+                                logger.info("recomputing flip binding {} isneg {}", g, g.getValue().get().isNegativeStrand());
+                                return g.getValue().get().isNegativeStrand();
+                            }
+
                         }
 
-                        @Override
-                        protected boolean computeValue() {
-                            logger.info("recomputing flip binding {} isneg {}", g, g.getValue().get().isNegativeStrand());
-                            return g.getValue().get().isNegativeStrand();
+                        Map<Genome, ObservableValue<? extends Boolean>> flips = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> new flipBinding(model.getSpan(g))));
+                        List<DoubleProperty> dividerPositions = genomeSplitPane.getDividers().stream().map(d -> d.positionProperty()).collect(Collectors.toList());
+
+                        logger.info("spans {}", spans);
+                        logger.info("flips {}", flips);
+                        logger.info("divider {}", dividerPositions);
+
+                        try {
+                            overlay.getChildren().setAll(cao.get().getOverlayPaths(model.getGenomes(), spans, flips, 100, dividerPositions, viewportWidthProperty, genomeSplitPane.heightProperty()));
+                        } catch (Exception e) {
+                            logger.info("caught alignment error");
+                            logger.info("message: ", e);
                         }
-
-                    }
-
-                    Map<Genome, ObservableValue<? extends Boolean>> flips = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> new flipBinding(model.getSpan(g))));
-                    List<DoubleProperty> dividerPositions = genomeSplitPane.getDividers().stream().map(d -> d.positionProperty()).collect(Collectors.toList());
-
-                    logger.info("spans {}", spans);
-                    logger.info("flips {}", flips);
-                    logger.info("divider {}", dividerPositions);
-
-                    try {
-                        overlay.getChildren().setAll(cao.get().getOverlayPaths(model.getGenomes(), spans, flips, 100, dividerPositions, viewportWidthProperty, genomeSplitPane.heightProperty()));
-                    } catch (Exception e) {
-                        logger.info("caught alignment error");
-                        logger.info("message: ", e);
-                    }
-                    }
-                    else{
+                    } else {
                         logger.info("not all spans set, not building alignment");
                     }
                 };
@@ -691,6 +808,7 @@ public class FXMLController implements Initializable {
     IntegerProperty x = new SimpleIntegerProperty(0);
     ReadOnlyDoubleProperty viewportWidthProperty;
     ObservableList<Node> genomeSplitPaneNodes;
+    List<EventSource<Integer>> coordinateClicks = new ArrayList<>();
     ListView<String> trackListView;
 
     @Override
@@ -760,8 +878,6 @@ public class FXMLController implements Initializable {
          }
          }
          */
-        
-
         Function<Genome, Node> f = (Genome g) -> {
             String text = String.format("%s:%s", g.getId(), g.getDescription());
             System.out.println(text);
@@ -789,6 +905,7 @@ public class FXMLController implements Initializable {
 //                System.out.println(c.getAddedSubList().get(0).getId());
                 System.out.println("changed genomes");
                 genomeSplitPaneNodes.clear();
+                coordinateClicks.clear();
 
                 Function<Genome, ListView<Track<AbstractContext>>> createListView = (Genome g) -> {
                     ListView<Track<AbstractContext>> trackListView = new ListView<>();
@@ -844,6 +961,8 @@ public class FXMLController implements Initializable {
 
                     trackListView.setCellFactory((ListView<Track<AbstractContext>> view) -> {
                         TrackCell<AbstractContext> cell = new TrackCell<AbstractContext>();
+//                        cell.getStyleClass().add("track");
+//                        cell.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
                         cell.setPrefWidth(Region.USE_COMPUTED_SIZE);
                         return cell;
                     });
@@ -854,12 +973,24 @@ public class FXMLController implements Initializable {
                 if (genomes.size() > 0) {
                     Genome g = genomes.get(0);
                     ListView<Track<AbstractContext>> trackListView = createListView.apply(g);
+                    trackListView.getStyleClass().add("genome-list-view");
+//                    trackListView.getStylesheets().add("/styles/TrackStyles.css");
                     trackListView.fixedCellSizeProperty().setValue(100);
-
+                    EventSource<Integer> build = new CoordinateClickStreamBuilder(trackListView, model.getSpan(g)).build();
+                    build.subscribe(coord -> {
+                        Optional<GenomeSpan> span = model.getSpan(g).getValue();
+                        span.ifPresent(s -> {
+                            int w = s.getEnd() - s.getStart() + 1;
+                            int wl = w / 2;
+                            int wr = w - wl - 1;
+                            model.setSpan(g, Optional.of(new GenomeSpan(s.getChr(), coord - wl, coord + wr, s.isNegativeStrand())));
+                        });
+                    });
                     VerticalHiddenScrollPane vhsp = new VerticalHiddenScrollPane();
                     vhsp.build(trackListView);
-                    
+
                     genomeSplitPaneNodes.add(vhsp);
+                    coordinateClicks.add(build);
                 }
                 for (int i = 1; i < genomes.size(); i++) {
                     // add a track to represent the alignment between sequential genomes
@@ -870,12 +1001,24 @@ public class FXMLController implements Initializable {
 //                    genomeSplitPaneNodes.add(f.apply(genomes.get(i)));
                     Genome g = genomes.get(i);
                     ListView<Track<AbstractContext>> trackListView = createListView.apply(g);
+                    trackListView.getStyleClass().add("genome-list-view");
                     trackListView.fixedCellSizeProperty().setValue(100);
-                    
+                    EventSource<Integer> build = new CoordinateClickStreamBuilder(trackListView, model.getSpan(g)).build();
+                    build.subscribe(coord -> {
+                        Optional<GenomeSpan> span = model.getSpan(g).getValue();
+                        span.ifPresent(s -> {
+                            int w = s.getEnd() - s.getStart() + 1;
+                            int wl = w / 2;
+                            int wr = w - wl - 1;
+                            model.setSpan(g, Optional.of(new GenomeSpan(s.getChr(), coord - wl, coord + wr, s.isNegativeStrand())));
+                        });
+                    });
+
                     VerticalHiddenScrollPane vhsp = new VerticalHiddenScrollPane();
                     vhsp.build(trackListView);
-                    
+
                     genomeSplitPaneNodes.add(vhsp);
+                    coordinateClicks.add(build);
                 }
             }
         });

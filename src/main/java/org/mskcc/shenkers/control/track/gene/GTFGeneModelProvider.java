@@ -5,6 +5,7 @@
  */
 package org.mskcc.shenkers.control.track.gene;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.Range;
@@ -94,7 +95,7 @@ public class GTFGeneModelProvider<T extends Pane & DomainFlippable> implements G
                             .collect(new RangeSetCollector());
                 }));
 
-                GeneModel model = new GeneModel(collect.get("exon"), Optional.ofNullable(collect.get("CDS")).map(c -> c.span()));
+                GeneModel model = new GeneModel(collect.get("transcript").span(), Optional.ofNullable(collect.get("exon")), Optional.ofNullable(collect.get("CDS")).map(c -> c.span()));
                 return model;
             });
 
@@ -102,8 +103,7 @@ public class GTFGeneModelProvider<T extends Pane & DomainFlippable> implements G
         } catch (IOException ex) {
             logger.error("exception reading gene models ", ex);
             throw new RuntimeException(ex);
-        }
-        finally{
+        } finally {
             query.close();
         }
     }
@@ -117,6 +117,29 @@ public class GTFGeneModelProvider<T extends Pane & DomainFlippable> implements G
             GTFContext next = iterator.next();
             gtf.add(next);
         }
+        ImmutableListMultimap<String, GTFContext> transcript_id_multimap = Multimaps.index(gtf.iterator(), GTFContext::getTranscriptId);
+
+        logger.info("adding transcript ranges");
+        gtf.addAll(transcript_id_multimap.keySet().stream().map(key -> {
+            System.out.println(key);
+            ImmutableList<GTFContext> contexts = transcript_id_multimap.get(key);
+            Range<Integer> span
+                    = contexts
+                    .stream()
+                    .map(c -> Range.closed(c.getStart(), c.getEnd()))
+                    .collect(new RangeSetCollector()).span();
+
+            GTFContext context = new GTFContext(contexts.get(0).getChr(), span.lowerEndpoint(), span.upperEndpoint());
+            context.setFeature("transcript");
+            context.setFrame(".");
+            context.setName(".");
+            context.setScore(".");
+            context.setSource(".");
+            context.setStrand('.');
+            context.setAttributes(String.format("transcript_id \"%s\";", key));
+            return context;
+        }).collect(Collectors.toList()));
+
         logger.info("sorting");
         Collections.sort(gtf, new CoordinateOrderComparator());
         logger.info("writing to compressed output stream");

@@ -21,8 +21,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.LockSupport;
+import javafx.beans.InvalidationListener;
+import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -33,8 +36,12 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
 import javafx.util.Pair;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
@@ -126,13 +133,14 @@ public class GeneModelView implements View<GeneModelContext> {
                     }
                     LockSupport.parkNanos(1);
 
-                    Range<Integer> span = m.getExons().span();
+                    Range<Integer> span = m.getSpan();
                     modelSpans.add(new Pair(span.lowerEndpoint(), span.upperEndpoint()));
-                    T view = (T) new GeneViewBuilder(m.getExons(), m.getCds()).getView(start, end);
+                    T view = (T) new GeneViewBuilder(span, m.getExons(), m.getCds()).getView(start, end);
                     modelPanes.add(view);
                 }
 
                 GenericStackedIntervalView stackedIntervalView = new GenericStackedIntervalView(start, end);
+                stackedIntervalView.getStyleClass().add("track");
                 stackedIntervalView.setData(modelSpans, modelPanes);
 
                 class FlipBinding extends BooleanBinding {
@@ -157,9 +165,13 @@ public class GeneModelView implements View<GeneModelContext> {
                 flipBinding = new FlipBinding(context.spanProperty());
 
                 ScrollPane scrollWrapper = new ScrollPane(stackedIntervalView);
-                HiddenSidesPane hsp = new HiddenSidesPane();
-                BorderPane pane = new BorderPane(hsp);
                 
+                
+                HiddenSidesPane hsp = new HiddenSidesPane();
+                BorderPane pane = new BorderPane(scrollWrapper);
+//                pane.getStyleClass().add("track");
+//                scrollWrapper.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
+//                stackedIntervalView.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
                 scrollWrapper.setPadding(Insets.EMPTY);
 
                 int tile_height = 20;
@@ -167,7 +179,7 @@ public class GeneModelView implements View<GeneModelContext> {
                 stackedIntervalView.flipDomainProperty().bind(flipBinding);
                 stackedIntervalView.setOrientation(Orientation.VERTICAL);
                 stackedIntervalView.setPrefTileHeight(tile_height);
-                stackedIntervalView.prefHeightProperty().bind(new SimpleDoubleProperty(tile_height + gap_pixels).multiply(Bindings.size(stackedIntervalView.getChildren())).subtract(gap_pixels));
+                stackedIntervalView.prefHeightProperty().bind(Bindings.max(new SimpleDoubleProperty(tile_height + gap_pixels).multiply(Bindings.size(stackedIntervalView.getChildren())).subtract(gap_pixels), 100));
                 stackedIntervalView.prefTileWidthProperty().bind(pane.widthProperty());
                 stackedIntervalView.prefWidthProperty().bind(pane.widthProperty());
                 stackedIntervalView.setVgap(gap_pixels);
@@ -178,8 +190,9 @@ public class GeneModelView implements View<GeneModelContext> {
                 scrollBar.visibleAmountProperty().bind(scrollWrapper.heightProperty().divide(stackedIntervalView.prefHeightProperty()));
                 scrollBar.setOrientation(Orientation.VERTICAL);
                 scrollWrapper.vvalueProperty().bindBidirectional(scrollBar.valueProperty());
-                hsp.setContent(scrollWrapper);
-                hsp.setRight(scrollBar);
+//                hsp.setContent(scrollWrapper);
+//                hsp.setRight(scrollBar);
+                
                 scrollWrapper.setVbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
                 scrollWrapper.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
 

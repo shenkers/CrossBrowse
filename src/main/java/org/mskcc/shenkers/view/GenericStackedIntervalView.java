@@ -24,8 +24,12 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.TilePane;
+import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Pair;
 import org.apache.commons.lang3.StringUtils;
@@ -56,6 +60,7 @@ public class GenericStackedIntervalView<T extends Pane & DomainFlippable>  exten
         setSnapToPixel(false);
         setVgap(5);
         setOrientation(Orientation.VERTICAL);
+//        setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
     }
     
     public BooleanProperty flipDomainProperty(){
@@ -112,7 +117,16 @@ public class GenericStackedIntervalView<T extends Pane & DomainFlippable>  exten
             }
         }
         
+//        {
+//            Rectangle background = new Rectangle();
+//            background.setFill(Color.WHITE);
+//            background.widthProperty().bind(widthProperty());
+//            background.heightProperty().bind(heightProperty());
+//            getChildren().add(background);
+//        }
+        
         List<T> children = new ArrayList<>();
+        
         for(List<IntervalNode<T>> row : rowNodes){
             GenericIntervalView<T> rowView = new GenericIntervalView<>(min, max);
            
@@ -124,7 +138,7 @@ public class GenericStackedIntervalView<T extends Pane & DomainFlippable>  exten
             
             children.add((T) rowView);
         }
-
-        getChildren().setAll(children);
+        
+        getChildren().addAll(children);
     }
 }

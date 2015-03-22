@@ -32,12 +32,14 @@ public class GeneViewBuilder<T extends Pane & DomainFlippable> {
     RangeSet<Integer> introns;
     RangeSet<Integer> untranslated;
 
-    public GeneViewBuilder(RangeSet<Integer> exons, Optional<Range<Integer>> cds) {
+    public GeneViewBuilder(Range<Integer> transcript, Optional<RangeSet<Integer>> exons, Optional<Range<Integer>> cds) {
 
-        gene = exons.span();
-        codingSubset = cds.map(c -> asClosed(exons.subRangeSet(c))).orElse(ImmutableRangeSet.of());
-        introns = asClosed(TreeRangeSet.create(exons).complement().subRangeSet(gene));
-        TreeRangeSet<Integer> utr = TreeRangeSet.create(exons);
+        gene = transcript;
+        codingSubset = cds.map(c -> exons.map(e -> asClosed(e.subRangeSet(c))).orElse(ImmutableRangeSet.of())).orElse(ImmutableRangeSet.of());
+        introns = TreeRangeSet.create();
+        introns.add(transcript);
+        exons.ifPresent(e -> introns.removeAll(e));
+        RangeSet<Integer> utr = exons.map(e ->(RangeSet<Integer>) TreeRangeSet.create(e)).orElse(TreeRangeSet.create());
         utr.removeAll(codingSubset);
         untranslated = utr;
         
