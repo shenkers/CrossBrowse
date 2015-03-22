@@ -144,8 +144,8 @@ public class ChainAlignmentOverlayNGTest {
 
                     Map<Genome, BooleanProperty> genomeFlipped = gOrder.stream().collect(Collectors.toMap(g -> g, g -> new SimpleBooleanProperty(false)));
 
-                    ObservableValue<Double> map = EasyBind.map(stackPane.widthProperty(), b -> b.doubleValue());
-                    List<Node> overlayPaths = instance.getOverlayPaths(gOrder, displayedSpans, gOrder.stream().collect(Collectors.toMap(g -> g, g -> genomeFlipped.get(g))), basesPerColumn, dividerPositionProperties, map, stackPane.heightProperty());
+                    
+                    List<Node> overlayPaths = instance.getOverlayPaths(gOrder, displayedSpans, gOrder.stream().collect(Collectors.toMap(g -> g, g -> genomeFlipped.get(g))), basesPerColumn, dividerPositionProperties, stackPane.widthProperty(), stackPane.heightProperty());
                     overlay.getChildren().setAll(overlayPaths);
 
                     Scene scene = new Scene(stackPane);

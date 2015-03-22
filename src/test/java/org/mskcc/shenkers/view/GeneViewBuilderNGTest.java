@@ -66,7 +66,7 @@ public class GeneViewBuilderNGTest {
                     exons.add(Range.closed(0, 3));
                     exons.add(Range.closed(5, 5));
                     exons.add(Range.closed(8, 10));
-                    GeneViewBuilder gvb = new GeneViewBuilder(exons,Optional.of(Range.closed(3, 8)));
+                    GeneViewBuilder gvb = new GeneViewBuilder(exons.span(), Optional.ofNullable(exons),Optional.ofNullable(Range.closed(3, 8)));
                     
                     GenericStackedIntervalView gsiv2 = new GenericStackedIntervalView(0, 10);
                     gsiv2.setData(Arrays.asList(

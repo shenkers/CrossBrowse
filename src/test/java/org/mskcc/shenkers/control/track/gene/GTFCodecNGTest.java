@@ -264,7 +264,7 @@ public class GTFCodecNGTest {
             Range<Integer> span = collect.get("exon").span();
             range.add(new Pair(span.lowerEndpoint(), span.upperEndpoint()));
             System.out.println("span: " + span);
-            T view = (T) new GeneViewBuilder(collect.get("exon"), Optional.of(collect.get("CDS")).map(c -> c.span())).getView(start, end);
+            T view = (T) new GeneViewBuilder(collect.get("transcript").span(), Optional.ofNullable(collect.get("exon")), Optional.ofNullable(collect.get("CDS")).map(c -> c.span())).getView(start, end);
             nodes.add(view);
 
         }
