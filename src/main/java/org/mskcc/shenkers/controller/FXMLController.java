@@ -83,6 +83,7 @@ import org.controlsfx.validation.decoration.StyleClassValidationDecoration;
 import org.controlsfx.validation.decoration.ValidationDecoration;
 import org.fxmisc.easybind.EasyBind;
 import org.fxmisc.easybind.monadic.MonadicBinding;
+import org.mskcc.shenkers.control.alignment.AlignmentRenderer;
 import org.mskcc.shenkers.control.alignment.io.AlignmentLoader;
 import org.mskcc.shenkers.control.alignment.AlignmentType;
 import org.mskcc.shenkers.control.track.AbstractContext;
@@ -394,13 +395,13 @@ public class FXMLController implements Initializable {
                     Track<BamContext> t = null;
 
                     if (path.matches(".*.bam$")) {
-                        t=trackBuilder.load(FileType.BAM, path);
+                        t = trackBuilder.load(FileType.BAM, path);
                     }
                     if (path.matches(".*.bw$")) {
-                        t=trackBuilder.load(FileType.WIG, path);
+                        t = trackBuilder.load(FileType.WIG, path);
                     }
                     if (path.matches(".*.gtf$")) {
-                        t=trackBuilder.load(FileType.GTF, path);
+                        t = trackBuilder.load(FileType.GTF, path);
                     }
 
                     Genome selectedGenome = genomeSelector.getSelectionModel().getSelectedItem();
@@ -410,7 +411,7 @@ public class FXMLController implements Initializable {
 
                     t.getSpan().addListener(new ChangeListener<Optional<GenomeSpan>>() {
                         public void changed(ObservableValue<? extends Optional<GenomeSpan>> observable, Optional<GenomeSpan> oldValue, Optional<GenomeSpan> newValue) {
-                            logger.info("span change detected in track "+observable);
+                            logger.info("span change detected in track " + observable);
                         }
                     });
 
@@ -616,6 +617,8 @@ public class FXMLController implements Initializable {
         });
     }
 
+    AlignmentRenderer ar;
+
     @FXML
     private void loadChainAlignment(ActionEvent event) {
         logger.info("loading alignments");
@@ -708,69 +711,12 @@ public class FXMLController implements Initializable {
                 List<AlignmentSource> alignmentSources = textFields.stream().map(textField -> alignmentLoader.load(textField.getText())).collect(Collectors.toList());
                 List<Pair<Genome, Genome>> selectedPairs = genomePairs.stream().map(comboBox -> comboBox.getSelectionModel().getSelectedItem()).collect(Collectors.toList());
                 model.setAlignments(selectedPairs, alignmentSources);
-                cao = Optional.of(new ChainAlignmentOverlay(model.getAlignments()));
+                ChainAlignmentOverlay CAO = new ChainAlignmentOverlay(model.getAlignments());
+                cao = Optional.of(CAO);
 
-                Runnable r = () -> {
-
-                    // TODO check if all spans are set, otherwise need to pass.
-                    overlay.getChildren().clear();
-                    logger.info("checking if all spans set");
-                    boolean allSpansSet = model.getGenomes().stream().allMatch(g -> model.getSpan(g).getValue().isPresent());
-                    if (allSpansSet) {
-                        logger.info("all spans set, building alignment component");
-                        Map<Genome, GenomeSpan> spans = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> model.getSpan(g).getValue().get()));
-
-//                2R:12743706-12747879
-//                2R:16228220-16231888:-
-//                        /home/sol/lailab/sol/genomes/chains/netChainSubset/dm3.droYak3.net.chain
-//                    /home/sol/lailab/sol/mel_yak_vir/total_rna/M/T.bam
-//                    /home/sol/lailab/sol/mel_yak_vir/total_rna/Y/T.bam
-                        //                    /home/sol/lailab/sol/mel_yak_vir/total_rna/V/T.bam
-//                    /home/sol/lailab/sol/genomes/chains/netChainSubset/M.Y.chain
-//                    /home/sol/lailab/sol/genomes/chains/netChainSubset/M.V.chain
-//                    /home/sol/lailab/sol/genomes/chains/netChainSubset/Y.V.chain
-//3R:4892065-4900435
-//3R:8938890-8947395
-//                    scaffold_12855:8568616-8577467
-                        //3R:4895365-4897435
-//3R:8942090-8944295
-//                    scaffold_12855:8570616-8573467
-                        class flipBinding extends BooleanBinding implements ObservableValue<Boolean> {
-
-                            ObservableValue<Optional<GenomeSpan>> g;
-
-                            public flipBinding(ObservableValue<Optional<GenomeSpan>> g) {
-                                super.bind(g);
-                                this.g = g;
-                            }
-
-                            @Override
-                            protected boolean computeValue() {
-                                logger.info("recomputing flip binding {} isneg {}", g, g.getValue().get().isNegativeStrand());
-                                return g.getValue().get().isNegativeStrand();
-                            }
-
-                        }
-
-                        Map<Genome, ObservableValue<? extends Boolean>> flips = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> new flipBinding(model.getSpan(g))));
-                        List<DoubleProperty> dividerPositions = genomeSplitPane.getDividers().stream().map(d -> d.positionProperty()).collect(Collectors.toList());
-
-                        logger.info("spans {}", spans);
-                        logger.info("flips {}", flips);
-                        logger.info("divider {}", dividerPositions);
-
-                        try {
-                            overlay.getChildren().setAll(cao.get().getOverlayPaths(model.getGenomes(), spans, flips, 100, dividerPositions, viewportWidthProperty, genomeSplitPane.heightProperty()));
-                        } catch (Exception e) {
-                            logger.info("caught alignment error");
-                            logger.info("message: ", e);
-                        }
-                    } else {
-                        logger.info("not all spans set, not building alignment");
-                    }
-                };
-
-                r.run();
+                List<DoubleProperty> dividerPositions = genomeSplitPane.getDividers().stream().map(d -> d.positionProperty()).collect(Collectors.toList());
+                ar = new AlignmentRenderer(overlay, model, CAO, dividerPositions, viewportWidthProperty, genomeSplitPane.heightProperty());
+                ar.start();
 
                 ObservableValue[] spanProperties = model.getGenomes().stream().map(g -> model.getSpan(g)).collect(Collectors.toList()).toArray(new ObservableValue[0]);
 
@@ -792,11 +738,56 @@ public class FXMLController implements Initializable {
                     @Override
                     public void invalidated(Observable observable) {
                         logger.info("span change detected, updating overlay");
-                        r.run();
+                        ar.restart();
                         spanBinding.get();
                     }
                 });
 
+                /*
+                 Runnable r = () -> {
+
+                 // TODO check if all spans are set, otherwise need to pass.
+                 overlay.getChildren().clear();
+                 logger.info("checking if all spans set");
+                 boolean allSpansSet = model.getGenomes().stream().allMatch(g -> model.getSpan(g).getValue().isPresent());
+                 if (allSpansSet) {
+                 logger.info("all spans set, building alignment component");
+                 Map<Genome, GenomeSpan> spans = model.getGenomes().stream().collect(Collectors.toMap(g -> g, g -> model.getSpan(g).getValue().get()));
+
+                 //                2R:12743706-12747879
+                 //                2R:16228220-16231888:-
+                 //                        /home/sol/lailab/sol/genomes/chains/netChainSubset/dm3.droYak3.net.chain
+                 //                    /home/sol/lailab/sol/mel_yak_vir/total_rna/M/T.bam
+                 //                    /home/sol/lailab/sol/mel_yak_vir/total_rna/Y/T.bam
+                 //                    /home/sol/lailab/sol/mel_yak_vir/total_rna/V/T.bam
+                 //                    /home/sol/lailab/sol/genomes/chains/netChainSubset/M.Y.chain
+                 //                    /home/sol/lailab/sol/genomes/chains/netChainSubset/M.V.chain
+                 //                    /home/sol/lailab/sol/genomes/chains/netChainSubset/Y.V.chain
+                 //3R:4892065-4900435
+                 //3R:8938890-8947395
+                 //                    scaffold_12855:8568616-8577467
+                 //3R:4895365-4897435
+                 //3R:8942090-8944295
+                 //                    scaffold_12855:8570616-8573467
+                 List<DoubleProperty> dividerPositions = genomeSplitPane.getDividers().stream().map(d -> d.positionProperty()).collect(Collectors.toList());
+
+                 logger.info("spans {}", spans);
+                 logger.info("flips {}", flips);
+                 logger.info("divider {}", dividerPositions);
+
+                 try {
+                 overlay.getChildren().setAll(cao.get().getOverlayPaths(model.getGenomes(), spans, flips, 100, dividerPositions, viewportWidthProperty, genomeSplitPane.heightProperty()));
+                 } catch (Exception e) {
+                 logger.info("caught alignment error");
+                 logger.info("message: ", e);
+                 }
+                 } else {
+                 logger.info("not all spans set, not building alignment");
+                 }
+                 };
+
+                 r.run();
+                 */
             }
             if (buttonType.equals(ButtonType.CANCEL)) {
                 logger.info("canceling loading alignments");
