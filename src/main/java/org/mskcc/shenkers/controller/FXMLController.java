@@ -1,16 +1,23 @@
 package org.mskcc.shenkers.controller;
 
+import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 import java.util.ResourceBundle;
 import java.util.function.Function;
+import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
@@ -27,9 +34,11 @@ import javafx.beans.property.Property;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableBooleanValue;
 import javafx.beans.value.ObservableDoubleValue;
 import javafx.beans.value.ObservableObjectValue;
 import javafx.beans.value.ObservableValue;
@@ -39,6 +48,7 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
+import javafx.concurrent.Worker;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -96,6 +106,9 @@ import org.mskcc.shenkers.control.alignment.AlignmentSource;
 import org.mskcc.shenkers.control.alignment.chain.ChainAlignmentOverlay;
 import org.mskcc.shenkers.control.track.bigwig.BigWigContext;
 import org.mskcc.shenkers.control.track.gene.GeneModelContext;
+import org.mskcc.shenkers.control.track.rest.RestIntervalContext;
+import org.mskcc.shenkers.control.track.rest.RestIntervalProvider;
+import org.mskcc.shenkers.control.track.rest.RestIntervalView;
 import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.SimpleTrack;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -618,6 +631,7 @@ public class FXMLController implements Initializable {
     }
 
     AlignmentRenderer ar;
+    Property<Worker.State> alignmentRenderState = new SimpleObjectProperty<>(Worker.State.SUCCEEDED);
 
     @FXML
     private void loadChainAlignment(ActionEvent event) {
@@ -716,6 +730,8 @@ public class FXMLController implements Initializable {
 
                 List<DoubleProperty> dividerPositions = genomeSplitPane.getDividers().stream().map(d -> d.positionProperty()).collect(Collectors.toList());
                 ar = new AlignmentRenderer(overlay, model, CAO, dividerPositions, viewportWidthProperty, genomeSplitPane.heightProperty());
+                alignmentRenderState.unbind();
+                alignmentRenderState.bind(ar.stateProperty());
                 ar.start();
 
                 ObservableValue[] spanProperties = model.getGenomes().stream().map(g -> model.getSpan(g)).collect(Collectors.toList()).toArray(new ObservableValue[0]);
@@ -801,10 +817,92 @@ public class FXMLController implements Initializable {
     ObservableList<Node> genomeSplitPaneNodes;
     List<EventSource<Integer>> coordinateClicks = new ArrayList<>();
     ListView<String> trackListView;
+    ObservableBooleanValue isBusy;
+
+    public <S, T> ObservableList<T> createMapValueBinding(ObservableMap<S, ObservableList<T>> om) {
+
+        // an observable list that is invalidated anytime one of the component lists is invalidated
+        ObservableList<ObservableList<T>> observableValues = FXCollections.observableArrayList(new Callback<ObservableList<T>, Observable[]>() {
+
+            @Override
+            public Observable[] call(ObservableList<T> param) {
+                return new Observable[]{param};
+            }
+        });
+
+        om.addListener(new InvalidationListener() {
+
+            @Override
+            public void invalidated(Observable observable) {
+                List<ObservableList<T>> tmp = new ArrayList<>();
+                for (S key : om.keySet()) {
+                    tmp.add(om.get(key));
+                }
+                observableValues.setAll(tmp);
+            }
+        });
+
+        ObservableList<T> flat = FXCollections.observableArrayList();
+        observableValues.addListener(new InvalidationListener() {
+
+            @Override
+            public void invalidated(Observable observable) {
+                List<T> tmp = new ArrayList<>();
+                for (ObservableList<T> ol : observableValues) {
+                    tmp.addAll(ol);
+                }
+                flat.setAll(tmp);
+            }
+        });
+
+        observableValues.setAll(om.values());
+
+        return flat;
+    }
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         ObservableList<Genome> genomes = model.getGenomes();
+
+        ObservableList<Track<AbstractContext>> createMapValueBinding = createMapValueBinding(model.getTracks());
+        ObservableList<Track> stateBound = FXCollections.observableArrayList(new Callback<Track, Observable[]>() {
+
+            @Override
+            public Observable[] call(Track param) {
+                return new Observable[]{param.getRenderStrategy().stateProperty()};
+            }
+        });
+
+        Bindings.bindContent(stateBound, createMapValueBinding);
+
+        isBusy = Bindings.createBooleanBinding(() -> {
+            logger.info("track render states " + createMapValueBinding.stream()
+                    .map(track -> track.getRenderStrategy().getState())
+                    .collect(Collectors.toList()));
+            logger.info("alignment render state " + alignmentRenderState.getValue());
+            Boolean busy
+                    = // if either the alignment render state
+                    // or the track renderers are not finished rendering
+                    Stream.concat(Stream.of(alignmentRenderState),
+                            createMapValueBinding.stream()
+                            .map(track -> track.getRenderStrategy().getState()))
+                    .map(state
+                            -> state != Worker.State.SUCCEEDED
+                            && state != Worker.State.CANCELLED
+                            && state != Worker.State.FAILED)
+                    .reduce(false, (b1, b2) -> b1 || b2);
+
+            return busy;
+        }, stateBound, alignmentRenderState);
+
+        isBusy.addListener(new ChangeListener<Boolean>() {
+
+            @Override
+            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+                logger.info("busy listener " + newValue);
+            }
+        });
+
         trackListView = new ListView<String>();
 
         {
@@ -1103,5 +1201,52 @@ public class FXMLController implements Initializable {
 //        }
 //                
 //        );
+        Genome g = new Genome("g", "genome");
+        model.addGenome(g);
+        model.setSpan(g, Optional.of(new GenomeSpan("X", 1, 10, false)));
+        for (int i = 4; i <= 7; i++) {
+            final int j = i;
+            Track trck = new Track<>(new RestIntervalContext(new RestIntervalProvider() {
+
+                @Override
+                public GenomeSpan query() {
+                    return new GenomeSpan("X", j, j, false);
+                }
+            }), Arrays.asList(new RestIntervalView()));
+            model.addTrack(g, trck);
+        }
+        RestIntervalContext ric = new RestIntervalContext(new RestIntervalProvider() {
+            
+            @Override
+            public GenomeSpan query() {
+                return new GenomeSpan("X", 4, 7, false);
+            }
+        });
+        Track trck = new Track<>(ric, Arrays.asList(new RestIntervalView()));
+        model.addTrack(g, trck);
+        new Thread(()->{
+        while(true){
+            
+           
+                ric.setReader(new RestIntervalProvider() {
+                    
+                    @Override
+                    public GenomeSpan query() {
+                        Random r = new Random();
+                        int i = r.nextInt(4);
+                        return new GenomeSpan("X", i, i+4, false);
+                    }
+                });
+          
+                Platform.runLater(()->{
+            trck.update();
+                });
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ex) {
+                
+            }
+        }
+        }).start();
     }
 }

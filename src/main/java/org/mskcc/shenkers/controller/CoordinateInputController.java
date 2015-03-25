@@ -41,6 +41,7 @@ import javafx.util.Callback;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.mskcc.shenkers.model.CoordinateChange;
+import org.mskcc.shenkers.model.CoordinateChangeEvent;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -70,8 +71,7 @@ public class CoordinateInputController implements Initializable {
     @FXML
     ComboBox<Genome> genomeSelected;
 
-    @CoordinateChange
-    EventSource coordinateChangeEvents;
+    EventSource<CoordinateChangeEvent> coordinateChangeEvents;
 
     Pattern coordinatePattern;
 
@@ -182,7 +182,7 @@ public class CoordinateInputController implements Initializable {
     }
 
     @Inject
-    public void setCoordinateChangeEvents(@CoordinateChange EventSource coordinateChangeEvents) {
+    public void setCoordinateChangeEvents(@CoordinateChange EventSource<CoordinateChangeEvent> coordinateChangeEvents) {
         logger.info("injecting coordinate change events");
         this.coordinateChangeEvents = coordinateChangeEvents;
     }
@@ -226,14 +226,11 @@ public class CoordinateInputController implements Initializable {
         });
 
         logger.info("subscribing to coordinate change events");
-        coordinateChangeEvents.subscribe(new Consumer<Object>() {
-            @Override
-            public void accept(Object t) {
-                logger.info("received coordinate change event {}", t);
-                Genome selected = genomeSelected.getSelectionModel().getSelectedItem();
-                Optional<GenomeSpan> selectedSpan = model.getSpan(selected).getValue();
-                currentCoordinate.textProperty().setValue(selectedSpan.map(span -> span.toString()).orElse("Coordinate not set"));
-            }
+        coordinateChangeEvents.subscribe((CoordinateChangeEvent t) -> {
+            logger.info("received coordinate change event {}", t);
+            genomeSelected.getSelectionModel().select(t.getGenome());
+            Optional<GenomeSpan> selectedSpan = t.getNext();
+            currentCoordinate.textProperty().setValue(selectedSpan.map(span -> span.toString()).orElse("Coordinate not set"));
         });
 
         currentCoordinate.setOnMouseClicked(e -> {

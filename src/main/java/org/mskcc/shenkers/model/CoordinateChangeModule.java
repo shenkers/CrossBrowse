@@ -8,10 +8,13 @@ package org.mskcc.shenkers.model;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Singleton;
+import com.google.inject.TypeLiteral;
 import com.google.inject.matcher.Matchers;
 import com.google.inject.name.Names;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.mskcc.shenkers.control.track.TrackFactory;
+import org.mskcc.shenkers.control.track.bam.BamContext;
 import org.reactfx.EventSource;
 import org.reactfx.EventStream;
 
@@ -27,11 +30,8 @@ public class CoordinateChangeModule extends AbstractModule{
     @Override
     protected void configure() {
         logger.info("configuring coordinate change module");
-        bind(EventSource.class).annotatedWith(CoordinateChange.class).toInstance(new EventSource());
-//        bind(ModelSingleton.class).to(ModelSingleton.class);
-        CoordinateChangeEventInterceptor ccei = new CoordinateChangeEventInterceptor();
-        requestInjection(ccei);
-        bindInterceptor(Matchers.any(),Matchers.annotatedWith(UpdatesCoordinates.class),ccei);
+//        bind(EventSource.class).annotatedWith(CoordinateChange.class).toInstance(new EventSource());
+        bind(new TypeLiteral<EventSource<CoordinateChangeEvent>>() {}).annotatedWith(CoordinateChange.class).toInstance(new EventSource<>());
     }
    
 }

@@ -28,6 +28,7 @@ import org.mskcc.shenkers.control.track.AbstractContext;
 import org.mskcc.shenkers.control.track.Track;
 import org.mskcc.shenkers.control.alignment.AlignmentSource;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
+import org.reactfx.EventSource;
 
 /**
  *
@@ -49,11 +50,19 @@ public class ModelSingleton {
     }
 
     ObservableList<Genome> genomes;
-    Map<Genome, ObservableList<Track<AbstractContext>>> tracks;
+    ObservableMap<Genome, ObservableList<Track<AbstractContext>>> tracks;
     ObservableMap<Genome, Property<Optional<GenomeSpan>>> spans;
     Map<Pair<Genome, Genome>, AlignmentSource> alignments;
 
     private int nTracks;
+    
+    
+    EventSource<CoordinateChangeEvent> coordinateChangeEvents;
+    
+    @Inject
+    private void setCoordinateSource(@CoordinateChange EventSource<CoordinateChangeEvent> source){
+        this.coordinateChangeEvents = source;
+    }
 
     public ObservableValue<Optional<GenomeSpan>> getSpan(Genome g) {
         return spans.get(g);
@@ -69,12 +78,15 @@ public class ModelSingleton {
         return alignments;
     }
 
-    @UpdatesCoordinates
+
     public void setSpan(Genome g, Optional<GenomeSpan> span) {
         logger.info("genome {}", g);
         logger.info("spans.get(g) {}", spans.get(g));
         logger.info("span {}", span);
+        CoordinateChangeEvent event = new CoordinateChangeEvent(g, spans.get(g).getValue(), span);
+        
         this.spans.get(g).setValue(span);
+        coordinateChangeEvents.push(event);
     }
 
     public void addTrack(Genome g, Track track) {
@@ -119,6 +131,10 @@ public class ModelSingleton {
 
     public ObservableList<Track<AbstractContext>> getTracks(Genome g) {
         return tracks.get(g);
+    }
+    
+    public ObservableMap<Genome,ObservableList<Track<AbstractContext>>> getTracks() {
+        return tracks;
     }
 
     public ObservableMap<Genome, Property<Optional<GenomeSpan>>> getObservableSpans() {

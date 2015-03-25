@@ -31,10 +31,5 @@ public class CoordinateChangeEventInterceptor implements MethodInterceptor {
         return result;
     }
 
-    @Inject 
-    public void setCoordinateChangeEvents(@CoordinateChange EventSource coordinateChangeEvents) {
-        logger.info("injecting event source");
-        this.coordinateChangeEvents = coordinateChangeEvents;
-    }
    
 }
