@@ -4,6 +4,9 @@ import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
 import java.io.File;
 import java.io.IOException;
+import java.net.DatagramSocket;
+import java.net.ServerSocket;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,6 +88,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.controlsfx.validation.Severity;
 import org.controlsfx.validation.ValidationResult;
 import org.controlsfx.validation.ValidationSupport;
 import org.controlsfx.validation.Validator;
@@ -93,6 +97,9 @@ import org.controlsfx.validation.decoration.StyleClassValidationDecoration;
 import org.controlsfx.validation.decoration.ValidationDecoration;
 import org.fxmisc.easybind.EasyBind;
 import org.fxmisc.easybind.monadic.MonadicBinding;
+import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
+import org.glassfish.jersey.server.ResourceConfig;
 import org.mskcc.shenkers.control.alignment.AlignmentRenderer;
 import org.mskcc.shenkers.control.alignment.io.AlignmentLoader;
 import org.mskcc.shenkers.control.alignment.AlignmentType;
@@ -109,6 +116,7 @@ import org.mskcc.shenkers.control.track.gene.GeneModelContext;
 import org.mskcc.shenkers.control.track.rest.RestIntervalContext;
 import org.mskcc.shenkers.control.track.rest.RestIntervalProvider;
 import org.mskcc.shenkers.control.track.rest.RestIntervalView;
+import org.mskcc.shenkers.jersey.TestResource;
 import org.mskcc.shenkers.model.ModelSingleton;
 import org.mskcc.shenkers.model.SimpleTrack;
 import org.mskcc.shenkers.model.datatypes.Genome;
@@ -132,7 +140,7 @@ public class FXMLController implements Initializable {
     int rowIndex = 0;
 
     @FXML
-    StackPane info;
+    StackPane snapshotPane;
 
     @FXML
     Pane overlay;
@@ -148,6 +156,21 @@ public class FXMLController implements Initializable {
     AlignmentLoader alignmentLoader;
     Optional<ChainAlignmentOverlay> cao;
     ObjectBinding spanBinding;
+
+    static FXMLController instance;
+
+    public FXMLController() {
+        logger.info("storing instance");
+        instance = this;
+    }
+
+    public static ObservableBooleanValue getIsBusy() {
+        return instance.isBusy;
+    }
+
+    public static Node getSnapshotNode() {
+        return instance.snapshotPane;
+    }
 
     @Inject
     private void setModel(ModelSingleton model) {
@@ -633,6 +656,129 @@ public class FXMLController implements Initializable {
     AlignmentRenderer ar;
     Property<Worker.State> alignmentRenderState = new SimpleObjectProperty<>(Worker.State.SUCCEEDED);
 
+    Property<HttpServer> server;
+    ResourceConfig resourceConfig;
+
+    @Inject
+    private void injectServer(Property<HttpServer> server) {
+        this.server = server;
+    }
+
+    @Inject
+    private void injectResourceConfig(ResourceConfig config) {
+        this.resourceConfig = config;
+    }
+
+    @FXML
+    private void launchServer() {
+
+        GridPane gp1 = new GridPane();
+        gp1.add(new Label("port:"), 0, 0);
+        TextField selectedFile = new TextField("");
+        gp1.add(selectedFile, 1, 0);
+
+        Function<String, Boolean> isPortNumber = (String txt) -> {
+            if (!txt.matches("[0-9]+")) {
+                return false;
+            }
+            int port = Integer.parseInt(txt);
+            return 0 <= port && port <= 65535;
+        };
+
+        Function<String, Boolean> isPortAvailable = txt -> {
+            if (!txt.matches("[0-9]+")) {
+                return false;
+            }
+            int port = Integer.parseInt(txt);
+            if (port < 0 || port > 65535) {
+                return false;
+            }
+
+            ServerSocket ss = null;
+            DatagramSocket ds = null;
+            try {
+                ss = new ServerSocket(port);
+                ss.setReuseAddress(true);
+                ds = new DatagramSocket(port);
+                ds.setReuseAddress(true);
+                return true;
+            } catch (IOException e) {
+            } finally {
+                if (ds != null) {
+                    ds.close();
+                }
+
+                if (ss != null) {
+                    try {
+                        ss.close();
+                    } catch (IOException e) {
+                        /* should not be thrown */
+                    }
+                }
+
+            }
+
+            return false;
+        };
+
+        ValidationSupport validation = new ValidationSupport();
+        validation.registerValidator(selectedFile, new Validator<String>() {
+
+            @Override
+            public ValidationResult apply(Control t, String text) {
+
+                return new ValidationResult()
+                        .addMessageIf(t, String.format("Port '%s' must be a number between 0-65535", text), Severity.ERROR, !isPortNumber.apply(text))
+                        .addMessageIf(t, String.format("Port %s not available", text), Severity.ERROR, !isPortAvailable.apply(text));
+            }
+        });
+
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+//        alert.getg
+//        alert.setHeight(800);
+        alert.setTitle("Configure API");
+//        alert.setHeaderText("Configure pairwise alignments");
+//        MonadicBinding<Alert.AlertType> map = EasyBind.map(validation.invalidProperty(), (isInvalid) -> {return isInvalid ? Alert.AlertType.ERROR : Alert.AlertType.NONE; });
+//        alert.alertTypeProperty().bind(map);
+
+        alert.headerTextProperty().bind(EasyBind.map(validation.invalidProperty(), invalid -> invalid ? "Complete required fields" : "Configure API"));
+        alert.getDialogPane().setContent(gp1);
+
+//        Alert.AlertType
+        alert.getDialogPane().lookupButton(ButtonType.OK).disableProperty().bind(validation.invalidProperty());
+//        ButtonType loginButtonType = new ButtonType("Create genome", ButtonData.FINISH);
+//        alert.getDialogPane().getButtonTypes().addAll(loginButtonType, ButtonType.CANCEL);
+//
+//        ((Button)alert.getDialogPane().lookupButton(ButtonData.OK_DONE)).setText("Create genome");
+        alert.showAndWait().ifPresent(buttonType -> {
+            logger.info("{}", buttonType);
+            logger.info("{}", buttonType.getText());
+            if (buttonType.equals(ButtonType.OK)) {
+                logger.info("preparing to load alignments");
+
+                if (server.getValue() != null) {
+                    logger.info("stopping running server");
+                    server.getValue().shutdown();
+                }
+
+                String uri = String.format("http://localhost:%s/", selectedFile.getText());
+                HttpServer http = GrizzlyHttpServerFactory.createHttpServer(URI.create(uri), resourceConfig);
+
+                server.setValue(http);
+                try {
+                    logger.info("starting server listening on " + uri);
+                    http.start();
+                } catch (IOException ex) {
+                    logger.error("exception:", ex);
+                }
+            }
+            if (buttonType.equals(ButtonType.CANCEL)) {
+                logger.info("canceling expose API");
+            }
+        });
+
+    }
+
     @FXML
     private void loadChainAlignment(ActionEvent event) {
         logger.info("loading alignments");
@@ -883,7 +1029,7 @@ public class FXMLController implements Initializable {
             Boolean busy
                     = // if either the alignment render state
                     // or the track renderers are not finished rendering
-                    Stream.concat(Stream.of(alignmentRenderState),
+                    Stream.concat(Stream.of(alignmentRenderState.getValue()),
                             createMapValueBinding.stream()
                             .map(track -> track.getRenderStrategy().getState()))
                     .map(state
@@ -891,15 +1037,15 @@ public class FXMLController implements Initializable {
                             && state != Worker.State.CANCELLED
                             && state != Worker.State.FAILED)
                     .reduce(false, (b1, b2) -> b1 || b2);
-
+            logger.info("any busy " + busy);
             return busy;
         }, stateBound, alignmentRenderState);
 
-        isBusy.addListener(new ChangeListener<Boolean>() {
+        isBusy.addListener(new InvalidationListener() {
 
             @Override
-            public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-                logger.info("busy listener " + newValue);
+            public void invalidated(Observable observable) {
+                logger.info("busy listener " + isBusy.get());
             }
         });
 
@@ -907,33 +1053,6 @@ public class FXMLController implements Initializable {
 
         {
             overlay.setMouseTransparent(true);
-        }
-        {
-            info.setMouseTransparent(true);
-
-            Label label = new Label("initialize alignment");
-            label.setOpacity(.2);
-            label.setFont(new Font(15));
-            label.setTextFill(Color.RED);
-            info.getChildren().add(new BorderPane(label));
-
-            model.getGenomes().addListener(new ListChangeListener<Genome>() {
-
-                @Override
-                public void onChanged(ListChangeListener.Change<? extends Genome> c) {
-                    StringExpression sp = new SimpleStringProperty("initialize alignment: ");
-
-                    for (Genome g : c.getList()) {
-                        sp = sp.concat(Bindings.format("[ %s %s ]", g, model.getSpan(g)));
-                    }
-                    Label label = new Label();
-                    label.setOpacity(.2);
-                    label.setFont(new Font(15));
-                    label.setTextFill(Color.RED);
-                    label.textProperty().bind(sp);
-                    info.getChildren().setAll(new BorderPane(label));
-                }
-            });
         }
 
         System.out.println("genomes: " + genomes);
@@ -1201,52 +1320,5 @@ public class FXMLController implements Initializable {
 //        }
 //                
 //        );
-        Genome g = new Genome("g", "genome");
-        model.addGenome(g);
-        model.setSpan(g, Optional.of(new GenomeSpan("X", 1, 10, false)));
-        for (int i = 4; i <= 7; i++) {
-            final int j = i;
-            Track trck = new Track<>(new RestIntervalContext(new RestIntervalProvider() {
-
-                @Override
-                public GenomeSpan query() {
-                    return new GenomeSpan("X", j, j, false);
-                }
-            }), Arrays.asList(new RestIntervalView()));
-            model.addTrack(g, trck);
-        }
-        RestIntervalContext ric = new RestIntervalContext(new RestIntervalProvider() {
-            
-            @Override
-            public GenomeSpan query() {
-                return new GenomeSpan("X", 4, 7, false);
-            }
-        });
-        Track trck = new Track<>(ric, Arrays.asList(new RestIntervalView()));
-        model.addTrack(g, trck);
-        new Thread(()->{
-        while(true){
-            
-           
-                ric.setReader(new RestIntervalProvider() {
-                    
-                    @Override
-                    public GenomeSpan query() {
-                        Random r = new Random();
-                        int i = r.nextInt(4);
-                        return new GenomeSpan("X", i, i+4, false);
-                    }
-                });
-          
-                Platform.runLater(()->{
-            trck.update();
-                });
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException ex) {
-                
-            }
-        }
-        }).start();
     }
 }

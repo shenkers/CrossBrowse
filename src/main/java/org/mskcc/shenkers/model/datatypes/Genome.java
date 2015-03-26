@@ -14,16 +14,28 @@ public class Genome {
     private String id;
     private String description;
 
+    private Genome() {
+    }
+
     public Genome(String id, String description) {
         this.id = id;
         this.description = description;
     }
 
-    public boolean equals(Genome obj) {
+    @Override
+    public boolean equals(Object obj) {
         if (obj == null) {
             return false;
         }
-        return getId().equals(obj.getId());
+        if (obj instanceof Genome) {
+            return getId().equals(((Genome) obj).getId());
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return getId().hashCode();
     }
 
     /**

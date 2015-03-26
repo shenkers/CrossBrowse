@@ -20,6 +20,7 @@
                         <MenuItem onAction="#loadBigWigTrack"  text="Load BigWig track"/>
                         <MenuItem onAction="#loadGtfGeneTrack"  text="Load GTF gene track"/>
                         <MenuItem onAction="#loadChainAlignment"  text="Load alignment"/>
+                        <MenuItem onAction="#launchServer"  text="Expose API"/>
                     </Menu>
                 </MenuBar>
             </top>
@@ -27,13 +28,12 @@
             
             
             <center>
-                <StackPane>
+                <StackPane fx:id="snapshotPane">
                     <children>
                         <SplitPane fx:id="genomeSplitPane" orientation="VERTICAL" >
                     
                         </SplitPane>
                         <Pane fx:id="overlay"/>
-                        <StackPane fx:id="info"/>
                     </children>
                 </StackPane>               
             </center>

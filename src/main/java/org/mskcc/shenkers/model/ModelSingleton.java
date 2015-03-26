@@ -39,6 +39,8 @@ public class ModelSingleton {
 
     private static final Logger logger = LogManager.getLogger();
 
+    static ModelSingleton instance;
+    
     @Inject
     ModelSingleton() {
         logger.info("creating model singleton");
@@ -47,6 +49,14 @@ public class ModelSingleton {
         nTracks = 0;
         spans = FXCollections.observableHashMap();
         alignments = FXCollections.observableHashMap();
+        instance = this;
+    }
+    
+    public static ModelSingleton getInstance(){
+        if(instance==null){
+            return new ModelSingleton();
+        }
+        return instance;
     }
 
     ObservableList<Genome> genomes;

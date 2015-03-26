@@ -7,14 +7,27 @@ package org.mskcc.shenkers.jersey;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
+import javafx.concurrent.Worker;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.ext.ContextResolver;
 import org.glassfish.grizzly.http.server.HttpHandler;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.server.Request;
 import org.glassfish.grizzly.http.server.Response;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
+//import org.glassfish.jersey.moxy.json.MoxyJsonConfig;
+//import org.glassfish.jersey.moxy.json.MoxyJsonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
+import org.mskcc.shenkers.jersey.TestResource.abc;
 import static org.testng.Assert.*;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -52,6 +65,7 @@ public class TestServerNGTest {
 //                request.get
             }
         }, "/testit");
+
 //        server = GrizzlyHttpServerFactory.createHttpServer(new URI("localhost"),true);        
     }
 
@@ -75,6 +89,43 @@ public class TestServerNGTest {
 //        } catch (IOException ex) {
 //            Logger.getLogger(TestServerNGTest.class.getName()).log(Level.SEVERE, null, ex);
 //        }
+        final Map<String, String> namespacePrefixMapper = new HashMap<String, String>();
+        namespacePrefixMapper.put("http://www.w3.org/2001/XMLSchema-instance", "xsi");
+
+//        final MoxyJsonConfig moxyJsonConfig = new MoxyJsonConfig()
+//                .setNamespacePrefixMapper(namespacePrefixMapper)
+//                .setNamespaceSeparator(':');
+//
+//        final ContextResolver<MoxyJsonConfig> jsonConfigResolver = moxyJsonConfig.resolver();
+        Client client = ClientBuilder.newClient();
+
+        WebTarget target = client.target("http://localhost:12356/setCoordinate");
+        abc post = null;
+        try {
+            post = target.request(MediaType.APPLICATION_JSON)
+//                    .get(abc.class);
+            .post(Entity.entity(new abc("def",0), MediaType.APPLICATION_JSON), abc.class);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+//                
+        System.out.println("result " + post);
+        try {
+            System.in.read();
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
     }
 
+    @Test
+    public void testReduce(){
+        Worker.State s = Worker.State.SUCCEEDED;
+        
+        Boolean reduce = Stream.concat(Stream.of(),Stream.of(s)).map(state ->
+                state != Worker.State.SUCCEEDED
+                        && state != Worker.State.CANCELLED
+                        && state != Worker.State.FAILED)
+                .reduce(false, (b1, b2) -> b1 || b2);
+        System.out.println("REDUCE "+reduce);
+    }
 }
