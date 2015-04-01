@@ -42,14 +42,23 @@ public class CoordinatesResource {
             @QueryParam("toNegativeStrand") boolean toNegativeStrand
     ) {
         log.info("id={} {} {} {} neg={}",genomeId,chr,start,end,toNegativeStrand);
-        int indexOf = model.getGenomes().indexOf(new Genome(genomeId, null));
         log.info("genomes {}",model.getGenomes());
+        if(genomeId!=null){
+        int indexOf = model.getGenomes().indexOf(new Genome(genomeId, null));
         log.info("index {}",indexOf);
         Genome genome = model.getGenomes().get(indexOf);
         log.info("genome {}",genome);
         Platform.runLater(()->{
         model.setSpan(genome, Optional.of(new GenomeSpan(chr, start, end, toNegativeStrand)));
         });
+        }
+        else{
+        Genome genome = model.getGenomes().get(0);
+        log.info("genome {}",genome);
+        Platform.runLater(()->{
+        model.setSpan(genome, Optional.of(new GenomeSpan(chr, start, end, toNegativeStrand)));
+        });
+        }
         return Response.ok().build();
     }
 //    @GET
