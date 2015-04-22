@@ -3,17 +3,13 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.mskcc.shenkers.control.track;
+package org.mskcc.shenkers.control.track.fasta;
 
 /**
  *
  * @author sol
  */
-public enum FileType {
+public enum Frame {
 
-    BAM,
-    WIG,
-    GTF,
-    BED,
-    FASTA
-}
+    p0, p1, p2;
+};

@@ -9,22 +9,26 @@ import com.google.inject.Inject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executor;
 
 
 public class TrackFactoryImpl<T extends AbstractContext> implements TrackFactory<T> {
 
     List<View<T>> views;
+    
+    Executor executor;
 
     @Inject
-    public TrackFactoryImpl(Set<View<T>> views) {
+    public TrackFactoryImpl(Set<View<T>> views, Executor executor) {
         this.views = new ArrayList<>(views);
+        this.executor = executor;
         
         views.stream().forEach((View<T> v) ->{ System.out.println(v);});
     }
     
     @Override
     public Track<T> create(T context) {
-        return new Track(context, views);
+        return new Track(context, views, executor);
     }
     
 }

@@ -5,6 +5,7 @@
  */
 package org.mskcc.shenkers.control.track.gene;
 
+import org.mskcc.shenkers.data.interval.CoordinateOrderComparator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.Multimaps;

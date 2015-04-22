@@ -3,76 +3,53 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.mskcc.shenkers.control.track.rest;
+package org.mskcc.shenkers.control.track.interval;
 
-import org.mskcc.shenkers.control.track.gene.*;
 import com.google.common.collect.Range;
-import org.mskcc.shenkers.control.track.bigwig.*;
-import org.mskcc.shenkers.control.track.bam.*;
-import htsjdk.samtools.Cigar;
-import htsjdk.samtools.CigarElement;
-import htsjdk.samtools.SAMRecord;
-import htsjdk.samtools.SAMRecordIterator;
-import htsjdk.samtools.SamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.LockSupport;
-import javafx.beans.InvalidationListener;
-import javafx.beans.Observable;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
-import javafx.beans.binding.DoubleBinding;
 import javafx.beans.property.Property;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.CornerRadii;
 import javafx.scene.layout.Pane;
-import javafx.scene.paint.Color;
 import javafx.util.Pair;
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.broad.igv.bbfile.BBFileReader;
-import org.broad.igv.bbfile.BigWigIterator;
-import org.broad.igv.bbfile.WigItem;
 import org.controlsfx.control.HiddenSidesPane;
-import org.fxmisc.easybind.EasyBind;
 import org.mskcc.shenkers.control.track.DomainFlippable;
 import org.mskcc.shenkers.control.track.View;
-import static org.mskcc.shenkers.control.track.bam.BamView1.coverage;
+import org.mskcc.shenkers.control.track.gene.GeneModel;
+import org.mskcc.shenkers.control.track.gene.GeneModelContext;
+import org.mskcc.shenkers.control.track.gene.GeneModelProvider;
+import org.mskcc.shenkers.data.interval.IntervalFeature;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.view.GeneViewBuilder;
 import org.mskcc.shenkers.view.GenericIntervalView;
 import org.mskcc.shenkers.view.GenericStackedIntervalView;
-import org.mskcc.shenkers.view.LineHistogramView;
 import org.mskcc.shenkers.view.RectangleIntervalNode;
-import org.mskcc.shenkers.view.SparseLineHistogramView;
 
 /**
  *
  * @author sol
  */
-public class RestIntervalView implements View<RestIntervalContext> {
+public class IntervalView implements View<IntervalContext> {
 
     private final Logger logger = LogManager.getLogger();
 
     @Override
-    public Task<Pane> getContent(RestIntervalContext context) {
+    public Task<Pane> getContent(IntervalContext context) {
         return context.spanProperty().getValue().map(i -> {
 
             String chr = i.getChr();
@@ -99,15 +76,15 @@ public class RestIntervalView implements View<RestIntervalContext> {
 
     public class PaneTask<T extends Pane & DomainFlippable> extends Task<Pane> {
 
-        RestIntervalContext context;
-        RestIntervalProvider modelProvider;
+        IntervalContext context;
+        IntervalProvider modelProvider;
         String chr;
         int start;
         int end;
         BooleanBinding flipBinding;
         Semaphore semaphore;
 
-        public PaneTask(RestIntervalContext context, String chr, int start, int end) {
+        public PaneTask(IntervalContext context, String chr, int start, int end) {
             super();
             this.context = context;
             this.modelProvider = context.readerProperty().getValue();
@@ -118,23 +95,20 @@ public class RestIntervalView implements View<RestIntervalContext> {
 
         @Override
         protected Pane call() throws Exception {
-            synchronized(context){
             try {
                 logger.info("calculating coverage for region {}:{}-{}", chr, start, end);
 
                 logger.info("acquiring semaphore for gene model provider");
-                
                 context.acquireReader();
                 logger.info("querying gene models");
 
-                List<Pair<Integer, Integer>> modelSpans = modelProvider.query(chr, start, end);
+                List<Pair<Integer, Integer>> modelSpans = new ArrayList<>();
                 List<T> modelPanes = new ArrayList<>();
 
-                for (Pair<Integer, Integer> span : modelSpans) {
-                    GenericIntervalView<T> view = new GenericIntervalView<T>(span.getKey(), span.getValue());
-                    view.setData(Arrays.asList(new Pair(span.getKey(), span.getValue())), Arrays.asList((T) new RectangleIntervalNode()));
-
-                    modelPanes.add((T) view);
+                for (IntervalFeature m : modelProvider.query(chr, start, end)) {
+                    logger.info("overlapping interval : {}",m);
+                    modelSpans.add(new Pair<>(m.getStart(),m.getEnd()));
+                    modelPanes.add((T) new RectangleIntervalNode());
                 }
 
                 GenericStackedIntervalView stackedIntervalView = new GenericStackedIntervalView(start, end);
@@ -203,7 +177,6 @@ public class RestIntervalView implements View<RestIntervalContext> {
                 context.releaseReader();
                 logger.info("released semaphore");
             }
-            }
         }
 
         @Override
@@ -213,5 +186,4 @@ public class RestIntervalView implements View<RestIntervalContext> {
         }
 
     }
-
 }

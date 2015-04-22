@@ -7,6 +7,7 @@ package org.mskcc.shenkers.control.track;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.concurrent.FutureTask;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -48,8 +49,11 @@ public class Track<T extends AbstractContext> {
     List<View<T>> availableViews;
 
     Property<Optional<GenomeSpan>> span;
+    
+    Executor executor;
 
-    public Track(T context, List<View<T>> availableViews) {
+    public Track(T context, List<View<T>> availableViews, Executor executor) {
+        this.executor = executor;
         this.dataContext = context;
         this.availableViews = availableViews;
         this.displayedView = new SimpleObjectProperty(availableViews.isEmpty() ? new View<T>() {
@@ -69,6 +73,7 @@ public class Track<T extends AbstractContext> {
         } : availableViews.get(0));
         
         renderStrategy = new RenderStrategy<>();
+        renderStrategy.setExecutor(executor);
         renderStrategy.setView(displayedView.getValue());
 
         span = new SimpleObjectProperty<>(Optional.empty());

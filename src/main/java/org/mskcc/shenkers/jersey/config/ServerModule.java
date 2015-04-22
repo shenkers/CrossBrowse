@@ -13,6 +13,7 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.mskcc.shenkers.jersey.AnnotateIntervalResource;
 import org.mskcc.shenkers.jersey.CoordinatesResource;
+import org.mskcc.shenkers.jersey.NamedIntervalResource;
 import org.mskcc.shenkers.jersey.SnapshotResource;
 import org.mskcc.shenkers.jersey.TestResource;
 
@@ -34,6 +35,7 @@ public class ServerModule extends AbstractModule {
                     CoordinatesResource.class,
                     SnapshotResource.class,
                     AnnotateIntervalResource.class,    
+                    NamedIntervalResource.class,
                 }
         );
         

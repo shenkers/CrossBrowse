@@ -61,25 +61,24 @@ public class GenericIntervalView<T extends Pane & DomainFlippable> extends Pane 
 
     @Override
     protected void layoutChildren() {
-        
+
         boolean flip = flipDomain.get();
         for (int i = 0; i < nodes.size(); i++) {
             IntervalNode inode = nodes.get(i);
             Pair<Integer, Integer> interval = inode.interval;
             Pane n = inode.content;
+            double width = getWidth();
+            double height = getHeight();
 
             if (flip) {
-                double upper = 1-((interval.getKey() - min + 0.) / length);
-                double lower = 1-((interval.getValue() - min + 1.) / length);
-                
-                double width = getWidth();
-                double height = getHeight();
+                double upper = 1 - ((interval.getKey() - min + 0.) / length);
+                double lower = 1 - ((interval.getValue() - min + 1.) / length);
+
                 n.resizeRelocate(widthProperty().get() * lower, 0, width * (upper - lower), height);
             } else {
                 double lower = (interval.getKey() - min + 0.) / length;
                 double upper = (interval.getValue() - min + 1.) / length;
-                double width = getWidth();
-                double height = getHeight();
+
                 n.resizeRelocate(widthProperty().get() * lower, 0, width * (upper - lower), height);
             }
         }

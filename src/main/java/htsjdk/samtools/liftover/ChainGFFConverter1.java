@@ -61,7 +61,7 @@ import java.util.stream.Collectors;
 import javafx.util.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.mskcc.shenkers.control.track.gene.CoordinateOrderComparator;
+import org.mskcc.shenkers.data.interval.CoordinateOrderComparator;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 
 /**

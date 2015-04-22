@@ -5,10 +5,15 @@
  */
 package org.mskcc.shenkers.control.track;
 
+import java.util.Spliterators;
 import java.util.concurrent.FutureTask;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.WorkerStateEvent;
@@ -35,38 +40,41 @@ import org.apache.logging.log4j.Logger;
 public class TrackCell<T extends AbstractContext> extends ListCell<Track<T>> {
 
     final static Logger logger = LogManager.getLogger();
-    
+
+    ObservableList<MenuItem> menuItems = FXCollections.observableArrayList();
+
     public TrackCell() {
-        setPadding(new Insets(2,0,2,0));
+        setPadding(new Insets(2, 0, 2, 0));
+    }
+
+    public ObservableList<MenuItem> getMenuItems() {
+        return menuItems;
     }
 
     protected void updateItem(Track<T> track, boolean empty) {
         super.updateItem(track, empty);
 
         if (!empty && track != null) {
-            
+
             setGraphic(new BorderPane(new Label("EMPTY")));
 
-            
-            
             Service<Pane> renderStrategy = track.getRenderStrategy();
-            
-            
+
             renderStrategy.setOnScheduled((e) -> {
                 setGraphic(new BorderPane(new Label("preparing to load track")));
             });
             renderStrategy.setOnRunning((e) -> {
                 setGraphic(new BorderPane(new Label("loading track")));
             });
-            
+
             renderStrategy.setOnFailed((e) -> {
                 setGraphic(new BorderPane(new Label("Failed: " + renderStrategy.getException().getMessage())));
             });
-            
+
             renderStrategy.setOnCancelled((e) -> {
                 setGraphic(new BorderPane(new Label("Cancelled")));
             });
-            
+
             renderStrategy.setOnSucceeded(new EventHandler<WorkerStateEvent>() {
 
                 @Override
@@ -80,31 +88,50 @@ public class TrackCell<T extends AbstractContext> extends ListCell<Track<T>> {
                     setGraphic(pane);
                 }
             });
-            
+
             track.update();
-            
-            
+
 //            Thread th = new Thread(node);
 //            th.setDaemon(true);
 //            th.start();
-
-                        // set the graphic for the track
+            // set the graphic for the track
 //                        setGraphic(new BorderPane(node));
-                        // add the context menu so the track can be configured 
+            // add the context menu so the track can be configured 
             // and the view strategy changed
-            MenuItem[] items = track.getViews().stream().map(
-                    (View<T> v) -> {
-                        MenuItem mi = new MenuItem(v.toString());
-                        mi.setOnAction(
-                                (ActionEvent event) -> {
-                                    logger.info("view change detected");
-                                    track.setView(v);
-                                    track.update();
-                                }
-                        );
-                        return mi;
-                    }
-            ).collect(Collectors.toList()).toArray(new MenuItem[0]);
+            logger.info("getting menu items from view {}", track.getView());
+            Stream<MenuItem> viewItems = track.getView()
+                    .getValue()
+                    .getMenuItems(track.dataContext)
+                    .stream()
+                    .map(i -> {
+                        // append a track update to each action
+                        EventHandler<ActionEvent> onAction = i.getOnAction();
+                        i.setOnAction(e -> {
+                            onAction.handle(e);
+                            track.update();
+                        });
+                        return i;
+                    });
+
+            MenuItem[] items
+                    = Stream.concat(Stream.concat(
+                                    track.getViews().stream().map(
+                                            (View<T> v) -> {
+                                                MenuItem mi = new MenuItem(v.toString());
+                                                mi.setOnAction(
+                                                        (ActionEvent event) -> {
+                                                            logger.info("view change detected");
+                                                            track.setView(v);
+                                                            track.update();
+                                                        }
+                                                );
+                                                return mi;
+                                            }
+                                    ),
+                                    menuItems.stream()),
+                            viewItems)
+                    .collect(Collectors.toList()).toArray(new MenuItem[0]);
+
             ContextMenu menu = new ContextMenu(items);
             setContextMenu(menu);
 

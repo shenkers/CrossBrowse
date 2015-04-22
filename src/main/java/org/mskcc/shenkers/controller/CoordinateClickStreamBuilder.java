@@ -11,6 +11,7 @@ import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.ReadOnlyDoubleProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Node;
+import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Region;
 import org.mskcc.shenkers.model.ModelSingleton;
@@ -29,24 +30,26 @@ public class CoordinateClickStreamBuilder {
     public CoordinateClickStreamBuilder(Region n, ObservableValue<Optional<GenomeSpan>> span) {
 
         this.n = n;
-this.span = span;
+        this.span = span;
     }
 
     /**
-     * 
-     * @return  an event stream of the coordinate clicked
+     *
+     * @return an event stream of the coordinate clicked
      */
     public EventSource<Integer> build() {
         EventSource<Integer> evt = new EventSource<>();
         n.addEventHandler(MouseEvent.MOUSE_CLICKED, (e) -> {
-            span.getValue().ifPresent(s -> {
-                int width = s.getEnd() - s.getStart() + 1;
-                double x = e.getX();
-                boolean flipped = s.isNegativeStrand();
-                int coord = (int) Math.floor(e.getX() / n.widthProperty().get() * width);
-                evt.push(flipped ? s.getEnd() - coord : s.getStart()+coord);
-            });
-
+            if (e.getButton() == MouseButton.PRIMARY) {
+                span.getValue().ifPresent(s -> {
+                    int width = s.getEnd() - s.getStart() + 1;
+                    double x = e.getX();
+                    boolean flipped = s.isNegativeStrand();
+                    int coord = (int) Math.floor(e.getX() / n.widthProperty().get() * width);
+                    evt.push(flipped ? s.getEnd() - coord : s.getStart() + coord);
+                });
+                e.consume();
+            }
         });
         return evt;
     }

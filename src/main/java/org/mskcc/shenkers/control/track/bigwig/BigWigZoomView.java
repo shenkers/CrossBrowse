@@ -5,6 +5,8 @@
  */
 package org.mskcc.shenkers.control.track.bigwig;
 
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeMap;
 import org.mskcc.shenkers.control.track.bam.*;
 import htsjdk.samtools.Cigar;
 import htsjdk.samtools.CigarElement;
@@ -21,6 +23,7 @@ import java.util.Optional;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.BiFunction;
+import javafx.application.Platform;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -40,13 +43,14 @@ import org.mskcc.shenkers.control.track.View;
 import static org.mskcc.shenkers.control.track.bam.BamView1.coverage;
 import org.mskcc.shenkers.model.datatypes.GenomeSpan;
 import org.mskcc.shenkers.view.LineHistogramView;
+import org.mskcc.shenkers.view.RangeMapHistogramView;
 import org.mskcc.shenkers.view.SparseLineHistogramView;
 
 /**
  *
  * @author sol
  */
-public class BigWigView implements View<BigWigContext> {
+public class BigWigZoomView implements View<BigWigContext> {
 
     private final Logger logger = LogManager.getLogger();
 
@@ -80,6 +84,7 @@ public class BigWigView implements View<BigWigContext> {
 
         BigWigContext context;
         BBFileReader bbfr;
+        List<Double> zoomFeatureDensities;
         String chr;
         int start;
         int end;
@@ -90,45 +95,31 @@ public class BigWigView implements View<BigWigContext> {
             super();
             this.context = context;
             this.bbfr = context.readerProperty().getValue();
+            zoomFeatureDensities = BigWigUtil.zoomFeatureDensities(bbfr);
             this.chr = chr;
             this.start = start;
             this.end = end;
         }
-        
+
         @Override
         protected Pane call() throws Exception {
             SAMRecordIterator sri = null;
             try {
                 logger.info("calculating coverage for region {}:{}-{}", chr, start, end);
 
-                logger.info("allocating coverage map");
-                Map<Integer, Double> data = new HashMap<>();
-
+                
                 logger.info("acquiring semaphore for bigwig reader");
                 context.acquireReader();
                 logger.info("parsing bigwig file");
 
-                BigWigIterator bwi = bbfr.getBigWigIterator(chr, start - 1, chr, end, false);
-                while (bwi.hasNext()) {
-                    if (isCancelled()) {
-                        logger.info(Thread.currentThread().getName() + " recieved cancel and terminating");
-                        break;
-                    }
+                int nPixels = 1000;
+                int zoom = BigWigUtil.selectZoomLevel(nPixels, end - start + 1, zoomFeatureDensities);
 
-                    LockSupport.parkNanos(1);
-
-                    WigItem wi = bwi.next();
-                    double value = wi.getWigValue();
-                    if(value>0)
-                    for (int i = Math.max(start, wi.getStartBase() + 1); i <= Math.min(end, wi.getEndBase()); i++) {
-                        data.put(i-start, value);
-                    }
-                }
-
+                RangeMap<Integer, Double> values = BigWigUtil.values(bbfr, chr, start, end, zoom);
+                RangeMapHistogramView lhv = new RangeMapHistogramView();
 
 //            double[] data = ArrayUtils.toPrimitive(IntStream.of(cov).mapToDouble(j -> j + 0.).boxed().collect(Collectors.toList()).toArray(new Double[0]));
                 logger.info("setting data");
-                SparseLineHistogramView lhv = new SparseLineHistogramView();
 
                 class FlipBinding extends BooleanBinding {
 
@@ -152,10 +143,11 @@ public class BigWigView implements View<BigWigContext> {
                 flipBinding = new FlipBinding(context.spanProperty());
 
                 lhv.flipDomainProperty().bind(flipBinding);
-                lhv.setData(data, end - start + 1, this);
-                
+
+                lhv.setData(Range.closed(start, end), values);
+
                 logger.info("calculating max");
-                data.values().stream()
+                values.asMapOfRanges().values().stream()
                         .max(Double::compare)
                         .ifPresent(m -> lhv.setMax(m));
 //            IntStream.of(cov).max().ifPresent(m -> lhv.setMax(m));

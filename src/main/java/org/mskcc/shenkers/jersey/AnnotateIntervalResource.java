@@ -11,6 +11,8 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.logging.Level;
 import javafx.application.Platform;
@@ -31,6 +33,7 @@ import org.apache.logging.log4j.Logger;
 import org.mskcc.shenkers.control.track.Track;
 import org.mskcc.shenkers.control.track.rest.RestIntervalContext;
 import org.mskcc.shenkers.control.track.rest.RestIntervalProvider;
+import org.mskcc.shenkers.control.track.rest.RestIntervalProviderImpl;
 import org.mskcc.shenkers.control.track.rest.RestIntervalView;
 import org.mskcc.shenkers.controller.FXMLController;
 import org.mskcc.shenkers.model.ModelSingleton;
@@ -47,6 +50,8 @@ public class AnnotateIntervalResource {
     Logger log = LogManager.getLogger();
 
     ModelSingleton model = ModelSingleton.getInstance();
+    
+    Executor executor = Executors.newSingleThreadExecutor();
 
     @GET
     public Response addInterval(
@@ -56,12 +61,9 @@ public class AnnotateIntervalResource {
             @QueryParam("end") int end,
             @QueryParam("toNegativeStrand") boolean toNegativeStrand
     ) {
-        Track trck = new Track<>(new RestIntervalContext(new RestIntervalProvider() {
-            @Override
-            public GenomeSpan query() {
-                return new GenomeSpan(chr,start,end,toNegativeStrand);
-            }
-        }), Arrays.asList(new RestIntervalView()));
+        RestIntervalProviderImpl rip = new RestIntervalProviderImpl();
+        rip.addInterval(chr, start, end);
+        Track trck = new Track<>(new RestIntervalContext(rip), Arrays.asList(new RestIntervalView()),executor);
         
         int indexOf = model.getGenomes().indexOf(new Genome(genomeId, null));
         log.info("genomes {}",model.getGenomes());

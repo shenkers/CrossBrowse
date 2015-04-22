@@ -23,6 +23,7 @@ import htsjdk.samtools.seekablestream.SeekableStream;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 
 /**
  * Created by IntelliJ IDEA.
@@ -31,7 +32,7 @@ import java.util.HashMap;
  * Time: 4:19:29 PM
  * To change this template use File | Settings | File Templates.
  */
-public class ZoomLevelIterator {
+public class ZoomLevelIterator implements Iterator<ZoomDataRecord> {
 
     private static Logger log = LogManager.getLogger();
 

@@ -62,9 +62,11 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
+import javafx.scene.control.MenuItem;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
 import javafx.scene.control.TextField;
@@ -438,6 +440,12 @@ public class FXMLController implements Initializable {
                     }
                     if (path.matches(".*.gtf$")) {
                         t = trackBuilder.load(FileType.GTF, path);
+                    }
+                    if (path.matches(".*.bed$")) {
+                        t = trackBuilder.load(FileType.BED, path);
+                    }
+                    if (path.matches(".*.fa$") || path.matches(".*.fasta$")) {
+                        t = trackBuilder.load(FileType.FASTA, path);
                     }
 
                     Genome selectedGenome = genomeSelector.getSelectionModel().getSelectedItem();
@@ -1169,6 +1177,14 @@ public class FXMLController implements Initializable {
 
                     trackListView.setCellFactory((ListView<Track<AbstractContext>> view) -> {
                         TrackCell<AbstractContext> cell = new TrackCell<AbstractContext>();
+                        // add a menu item to remove this track
+                        MenuItem removeTrack = new MenuItem("Remove track");
+                        removeTrack.setOnAction(e -> {
+                            Track<AbstractContext> item = cell.getItem();
+                            logger.info("removing track {} from genome {}",item,g);
+                            model.removeTrack(g, item);
+                        });
+                        cell.getMenuItems().add(removeTrack);
 //                        cell.getStyleClass().add("track");
 //                        cell.setBackground(new Background(new BackgroundFill(Color.WHITE, CornerRadii.EMPTY, Insets.EMPTY)));
                         cell.setPrefWidth(Region.USE_COMPUTED_SIZE);
@@ -1256,7 +1272,7 @@ public class FXMLController implements Initializable {
 //            public String toString() {
 //                return i+"";
 //            }
-//            
+//
 //            
 //        }
 //        ObservableList<abc> mapped_oal = EasyBind.map(oal, 
@@ -1279,6 +1295,12 @@ public class FXMLController implements Initializable {
 //        System.out.println(mapped_oal);
 //        System.out.println(l);
 //        System.exit(0);
+        /*
+        Genome g = new Genome("g", "G");
+        model.addGenome(g);
+        Track load = trackBuilder.load(FileType.FASTA, "/mnt/LaiLab/sol/mel_yak_vir/genomes/M.fa");
+        model.addTrack(g, load);
+        model.setSpan(g, Optional.of(new GenomeSpan("3R",4349587,4349609, false)));
         Rectangle r = new Rectangle(10, 20);
 
         Rectangle r2 = new Rectangle(30, 40, 10, 20);
@@ -1293,6 +1315,7 @@ public class FXMLController implements Initializable {
 
         Label lbl = new Label("hi");
 
+        */
         sim = new SimpleTrack();
 //        ModelSingleton.getInstance().genomeSpanProperty().addListener(sim);
 

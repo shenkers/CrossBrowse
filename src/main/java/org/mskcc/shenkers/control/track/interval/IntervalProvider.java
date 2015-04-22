@@ -3,18 +3,16 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package org.mskcc.shenkers.control.track.rest;
+package org.mskcc.shenkers.control.track.interval;
 
-import java.util.List;
-import javafx.util.Pair;
 import org.mskcc.shenkers.control.track.gene.*;
-import org.mskcc.shenkers.model.datatypes.GenomeSpan;
+import org.mskcc.shenkers.data.interval.IntervalFeature;
 
 /**
  *
  * @author sol
  */
-public interface RestIntervalProvider {
+public interface IntervalProvider {
     
-    public List<Pair<Integer,Integer>> query(String chr, int start, int end);
+    public Iterable<IntervalFeature> query(String chr, int start, int end);
 }

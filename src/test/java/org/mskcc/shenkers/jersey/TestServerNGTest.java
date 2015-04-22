@@ -46,7 +46,7 @@ public class TestServerNGTest {
     public TestServerNGTest() {
     }
 
-    @BeforeClass
+//    @BeforeClass
     public static void setUpClass() throws Exception {
 //        ResourceConfig config = new ResourceConfig();
         final ResourceConfig resourceConfig = new ResourceConfig(TestResource.class);
@@ -69,7 +69,7 @@ public class TestServerNGTest {
 //        server = GrizzlyHttpServerFactory.createHttpServer(new URI("localhost"),true);        
     }
 
-    @AfterClass
+//    @AfterClass
     public static void tearDownClass() throws Exception {
         server.shutdown();
     }
@@ -110,11 +110,6 @@ public class TestServerNGTest {
         }
 //                
         System.out.println("result " + post);
-        try {
-            System.in.read();
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
     }
 
     @Test
